@@ -571,8 +571,9 @@
 
   <!-- SETTINGS -->
   <div class="section" id="tab-settings">
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
-      <div class="card">
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;margin-bottom:20px">
+      <!-- 宿泊者マスタ -->
+      <div class="card" style="margin-bottom:0">
         <div class="card-header"><div class="card-title"><span class="icon">👤</span>宿泊者マスタ</div></div>
         <label class="upload-zone" onclick="document.getElementById('persons-file').click()">
           <div class="upload-icon">📥</div>
@@ -588,21 +589,34 @@
         </div>
         <div id="persons-count" style="font-size:11px;color:var(--text3)"></div>
       </div>
-      <div class="card">
+      <!-- 業務名マスタ -->
+      <div class="card" style="margin-bottom:0">
+        <div class="card-header"><div class="card-title"><span class="icon">🏗</span>業務名マスタ</div></div>
+        <div class="chips" id="projects-chips"></div>
+        <div class="divider"></div>
+        <div style="display:flex;gap:8px;margin-bottom:8px">
+          <input type="text" id="project-manual" placeholder="業務名を入力して追加">
+          <button class="btn btn-secondary" onclick="addProjectManual()">追加</button>
+        </div>
+        <div id="projects-count" style="font-size:11px;color:var(--text3)"></div>
+      </div>
+      <!-- 宿泊先マスタ（都道府県別） -->
+      <div class="card" style="margin-bottom:0">
         <div class="card-header"><div class="card-title"><span class="icon">🏨</span>宿泊先マスタ</div></div>
         <label class="upload-zone" onclick="document.getElementById('hotels-file').click()">
           <div class="upload-icon">📥</div>
           <div class="upload-text">Excelファイルをアップロード</div>
-          <div class="upload-sub">A列：宿泊先名称（1行目はヘッダーでもOK）</div>
+          <div class="upload-sub">A列：都道府県 or ヘッダー、B列：宿泊先名</div>
           <input type="file" id="hotels-file" accept=".xlsx,.xls" onchange="loadHotels(event)">
         </label>
-        <div class="chips" id="hotels-chips"></div>
+        <div id="hotels-by-pref" style="margin-top:10px;max-height:220px;overflow-y:auto"></div>
         <div class="divider"></div>
-        <div style="display:flex;gap:8px;margin-bottom:8px">
-          <input type="text" id="hotel-manual" placeholder="宿泊先名称を入力して追加">
-          <button class="btn btn-secondary" onclick="addHotelManual()">追加</button>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+          <input type="text" id="hotel-pref-manual" placeholder="都道府県">
+          <input type="text" id="hotel-name-manual" placeholder="宿泊先名称">
         </div>
-        <div id="hotels-count" style="font-size:11px;color:var(--text3)"></div>
+        <button class="btn btn-secondary" style="width:100%" onclick="addHotelManual()">追加</button>
+        <div id="hotels-count" style="font-size:11px;color:var(--text3);margin-top:8px"></div>
       </div>
     </div>
 
@@ -673,9 +687,33 @@
 </div>
 
 <script>
-let records = JSON.parse(localStorage.getItem('fd_records') || '[]');
-let persons  = JSON.parse(localStorage.getItem('fd_persons') || JSON.stringify(['加瀬谷 建','星野 健太','佐藤 優太','二木 暸太郎','渡部 智也','藤岡 悠','本間 祐大','堀井 博之']));
-let hotels   = JSON.parse(localStorage.getItem('fd_hotels')  || JSON.stringify(['ベネシアンホテル白石蔵王','スーパーホテル仙台空港インター','グリーンホテル大河原','キャッスルイン仙台','スーパーホテル仙台空港','ホテルルートイン仙台大和インター','ホテルルートイン古川駅前','気仙沼セントラルホテル松軒','ホテルルートイン石巻河南インター','ホテル定禅寺','スマイルホテル仙台泉インター','アパホテル宮城古川駅前','ホテルルートイン大館駅南','スーパーホテル 矢巾駅東口','亀の井ホテル　秋田湯瀬','アネックス大館','縄文のふる里　大湯温泉　ホテル鹿角','アパホテル秋田千秋公園','ＡＤＨＯＴＥＬ','Tabist お宿ちとせ','グランドパークホテル大館','ロイヤルホテル大館','ホテルニュー松尾','きみまち阪壱ノ座','ホテルルートイン長町インター','ホテルイン鶴岡','スーパーホテル山形・鶴岡','ホテル・アルファ－ワン酒田','テルグランシェール花巻','ホテルルートイン北上駅前','草のホテル','シーラックパル郡山','東横INN北上駅新幹線口']));
+let records        = JSON.parse(localStorage.getItem('fd_records') || '[]');
+let persons        = JSON.parse(localStorage.getItem('fd_persons') || JSON.stringify(['加瀬谷 建','星野 健太','佐藤 優太','二木 暸太郎','渡部 智也','藤岡 悠','本間 祐大','堀井 博之']));
+let projectsMaster = JSON.parse(localStorage.getItem('fd_projects') || '[]');
+// hotels は {pref, name} のオブジェクト配列で管理
+const DEFAULT_HOTELS = [
+  {pref:'宮城',name:'ベネシアンホテル白石蔵王'},{pref:'宮城',name:'スーパーホテル仙台空港インター'},
+  {pref:'宮城',name:'グリーンホテル大河原'},{pref:'宮城',name:'キャッスルイン仙台'},
+  {pref:'宮城',name:'スーパーホテル仙台空港'},{pref:'宮城',name:'ホテルルートイン仙台大和インター'},
+  {pref:'宮城',name:'ホテルルートイン古川駅前'},{pref:'宮城',name:'気仙沼セントラルホテル松軒'},
+  {pref:'宮城',name:'ホテルルートイン石巻河南インター'},{pref:'宮城',name:'ホテル定禅寺'},
+  {pref:'宮城',name:'スマイルホテル仙台泉インター'},{pref:'宮城',name:'アパホテル宮城古川駅前'},
+  {pref:'宮城',name:'ホテルルートイン長町インター'},
+  {pref:'秋田',name:'ホテルルートイン大館駅南'},{pref:'秋田',name:'スーパーホテル 矢巾駅東口'},
+  {pref:'秋田',name:'亀の井ホテル　秋田湯瀬'},{pref:'秋田',name:'アネックス大館'},
+  {pref:'秋田',name:'縄文のふる里　大湯温泉　ホテル鹿角'},{pref:'秋田',name:'アパホテル秋田千秋公園'},
+  {pref:'秋田',name:'ＡＤＨＯＴＥＬ'},{pref:'秋田',name:'Tabist お宿ちとせ'},
+  {pref:'秋田',name:'グランドパークホテル大館'},{pref:'秋田',name:'ロイヤルホテル大館'},
+  {pref:'秋田',name:'ホテルニュー松尾'},{pref:'秋田',name:'きみまち阪壱ノ座'},
+  {pref:'山形',name:'ホテルイン鶴岡'},{pref:'山形',name:'スーパーホテル山形・鶴岡'},
+  {pref:'山形',name:'ホテル・アルファ－ワン酒田'},
+  {pref:'岩手',name:'テルグランシェール花巻'},{pref:'岩手',name:'ホテルルートイン北上駅前'},
+  {pref:'岩手',name:'草のホテル'},{pref:'岩手',name:'東横INN北上駅新幹線口'},
+  {pref:'その他',name:'シーラックパル郡山'}
+];
+let hotels = JSON.parse(localStorage.getItem('fd_hotels_v2') || JSON.stringify(DEFAULT_HOTELS));
+// 都道府県リスト（ユニーク・登録順）
+function getPrefs(){ return [...new Set(hotels.map(h=>h.pref))]; }
 let selectedPersons = [];
 let calStart = null, calEnd = null, calStep = 0;
 let calYear, calMonth;
@@ -684,9 +722,10 @@ let fiscalYear = getCurrentFY();
 
 function getCurrentFY(){const n=new Date();return n.getMonth()>=3?n.getFullYear():n.getFullYear()-1;}
 function save(){
-  localStorage.setItem('fd_records',JSON.stringify(records));
-  localStorage.setItem('fd_persons',JSON.stringify(persons));
-  localStorage.setItem('fd_hotels', JSON.stringify(hotels));
+  localStorage.setItem('fd_records',  JSON.stringify(records));
+  localStorage.setItem('fd_persons',  JSON.stringify(persons));
+  localStorage.setItem('fd_hotels_v2',JSON.stringify(hotels));
+  localStorage.setItem('fd_projects', JSON.stringify(projectsMaster));
 }
 
 function switchTab(tab){
@@ -812,10 +851,36 @@ function showProjectDetail(name){
 }
 
 function renderMasterChips(){
+  // 宿泊者
   document.getElementById('persons-chips').innerHTML=persons.map(p=>`<span class="chip">${esc(p)}</span>`).join('');
-  document.getElementById('hotels-chips').innerHTML=hotels.map(h=>`<span class="chip">${esc(h)}</span>`).join('');
   document.getElementById('persons-count').textContent=`${persons.length}名登録済み`;
-  document.getElementById('hotels-count').textContent=`${hotels.length}件登録済み`;
+  // 宿泊先（都道府県別）
+  const hotelsByPref=document.getElementById('hotels-by-pref');
+  if(hotelsByPref){
+    const prefs=getPrefs();
+    hotelsByPref.innerHTML=prefs.map(pref=>{
+      const list=hotels.filter(h=>h.pref===pref);
+      return`<div style="margin-bottom:12px">
+        <div style="font-size:11px;font-weight:700;color:var(--navy);letter-spacing:0.05em;margin-bottom:6px;padding:3px 8px;background:var(--surface3);border-radius:4px;display:inline-block">${esc(pref)}</div>
+        <div class="chips">${list.map(h=>`<span class="chip" style="display:inline-flex;align-items:center;gap:4px">${esc(h.name)}<span onclick="removeHotel('${esc(pref)}','${esc(h.name)}')" style="cursor:pointer;color:var(--text3);font-size:10px" title="削除">✕</span></span>`).join('')}</div>
+      </div>`;
+    }).join('');
+    document.getElementById('hotels-count').textContent=`${hotels.length}件登録済み`;
+  }
+  // 業務名
+  const pc=document.getElementById('projects-chips');
+  if(pc){
+    pc.innerHTML=projectsMaster.map(p=>`<span class="chip" style="display:inline-flex;align-items:center;gap:4px">${esc(p)}<span onclick="removeProject('${esc(p)}')" style="cursor:pointer;color:var(--text3);font-size:10px" title="削除">✕</span></span>`).join('');
+    document.getElementById('projects-count').textContent=`${projectsMaster.length}件登録済み`;
+  }
+}
+function removeHotel(pref,name){
+  hotels=hotels.filter(h=>!(h.pref===pref&&h.name===name));
+  save();renderMasterChips();
+}
+function removeProject(name){
+  projectsMaster=projectsMaster.filter(p=>p!==name);
+  save();renderMasterChips();
 }
 
 function loadPersons(e){
@@ -831,6 +896,11 @@ function loadPersons(e){
   };
   reader.readAsBinaryString(file);
 }
+function addPersonManual(){
+  const v=document.getElementById('person-manual').value.trim();if(!v)return;
+  if(!persons.includes(v)){persons.push(v);save();renderMasterChips();toast(`${v} を追加`);}
+  document.getElementById('person-manual').value='';
+}
 function loadHotels(e){
   const file=e.target.files[0];if(!file)return;
   const reader=new FileReader();
@@ -838,21 +908,35 @@ function loadHotels(e){
     const wb=XLSX.read(ev.target.result,{type:'binary'});
     const ws=wb.Sheets[wb.SheetNames[0]];
     const rows=XLSX.utils.sheet_to_json(ws,{header:1});
-    const names=rows.flat().map(v=>String(v||'').trim()).filter(v=>v&&v!=='宿泊先'&&v!=='施設名');
-    names.forEach(n=>{if(!hotels.includes(n))hotels.push(n);});
-    save();renderMasterChips();toast(`${names.length}件の宿泊先を読み込みました`);
+    let currentPref='その他'; let added=0;
+    rows.forEach(row=>{
+      const val=String(row[1]||row[0]||'').trim();
+      if(!val)return;
+      // 都道府県ヘッダー行の判定（ホテル名らしくない短い行）
+      const isHeader=['宮城','秋田','山形','岩手','青森','北海道','福島','新潟','その他'].includes(val)
+        || (val.length<=6 && !val.includes('ホテル') && !val.includes('イン') && !val.includes('旅館'));
+      if(isHeader){currentPref=val;return;}
+      if(val==='宿泊先'||val==='施設名')return;
+      const exists=hotels.some(h=>h.pref===currentPref&&h.name===val);
+      if(!exists){hotels.push({pref:currentPref,name:val});added++;}
+    });
+    save();renderMasterChips();toast(`${added}件の宿泊先を読み込みました`);
   };
   reader.readAsBinaryString(file);
 }
-function addPersonManual(){
-  const v=document.getElementById('person-manual').value.trim();if(!v)return;
-  if(!persons.includes(v)){persons.push(v);save();renderMasterChips();toast(`${v} を追加`);}
-  document.getElementById('person-manual').value='';
-}
 function addHotelManual(){
-  const v=document.getElementById('hotel-manual').value.trim();if(!v)return;
-  if(!hotels.includes(v)){hotels.push(v);save();renderMasterChips();toast(`${v} を追加`);}
-  document.getElementById('hotel-manual').value='';
+  const pref=document.getElementById('hotel-pref-manual').value.trim();
+  const name=document.getElementById('hotel-name-manual').value.trim();
+  if(!pref||!name){toast('都道府県と宿泊先名を入力してください','error');return;}
+  if(!hotels.some(h=>h.pref===pref&&h.name===name)){
+    hotels.push({pref,name});save();renderMasterChips();toast(`${name} を追加`);
+  }
+  document.getElementById('hotel-name-manual').value='';
+}
+function addProjectManual(){
+  const v=document.getElementById('project-manual').value.trim();if(!v)return;
+  if(!projectsMaster.includes(v)){projectsMaster.push(v);save();renderMasterChips();toast(`${v} を追加`);}
+  document.getElementById('project-manual').value='';
 }
 
 function filterDropdown(inputId,ddId,list){
@@ -991,16 +1075,20 @@ function applyCalendar(calId){
 }
 
 function getFormBodyHTML(){
-  const hotelOptions = hotels.map(h=>`<option value="${esc(h)}">${esc(h)}</option>`).join('');
+  const projOptions=projectsMaster.map(p=>`<option value="${esc(p)}">${esc(p)}</option>`).join('');
+  const prefOptions=getPrefs().map(p=>`<option value="${esc(p)}">${esc(p)}</option>`).join('');
   return`
     <div class="form-group full">
       <label>対象業務名 <span style="color:var(--red)">*</span></label>
-      <input type="text" id="f-project" placeholder="例：○○橋点検業務">
+      <select id="f-project">
+        <option value="">― リストから選択 ―</option>
+        ${projOptions}
+      </select>
     </div>
     <div class="form-group full">
-      <label>宿泊日 <span style="color:var(--red)">*</span></label>
-      <span style="font-size:11px;color:var(--text3);font-weight:400;margin-left:4px;letter-spacing:0">(チェックイン〜チェックアウト)</span>
-      <div class="rel">
+      <label style="display:inline">宿泊日 <span style="color:var(--red)">*</span></label>
+      <span style="font-size:11px;color:var(--text3);font-weight:400;margin-left:6px;letter-spacing:0">(チェックイン〜チェックアウト)</span>
+      <div class="rel" style="margin-top:5px">
         <div class="date-range-display" id="f-date-display" onclick="toggleCalendar('modal-cal')">
           <span id="f-date-text" style="color:var(--text3)">日付を選択してください</span>
           <span style="font-size:16px">📅</span>
@@ -1008,15 +1096,22 @@ function getFormBodyHTML(){
         <div class="cal-popup" id="modal-cal"></div>
       </div>
     </div>
-    <div class="form-group full">
+    <div class="form-group">
+      <label>都道府県 <span style="color:var(--red)">*</span></label>
+      <select id="f-pref" onchange="onPrefChange()">
+        <option value="">― 選択 ―</option>
+        ${prefOptions}
+      </select>
+    </div>
+    <div class="form-group">
       <label>宿泊先 <span style="color:var(--red)">*</span></label>
-      <select id="f-hotel">
-        <option value="">― リストから選択 ―</option>
-        ${hotelOptions}
+      <select id="f-hotel" disabled>
+        <option value="">― 都道府県を先に選択 ―</option>
       </select>
     </div>
     <div class="form-group full">
       <label>宿泊者 <span style="color:var(--red)">*</span></label>
+      <div style="font-size:11px;color:var(--text3);margin-bottom:4px">（＋ 追加 の右側クリックで宿泊者の追加ができます）</div>
       <div class="rel">
         <div class="tag-input-wrapper" id="persons-wrapper" onclick="openPersonList()">
           <span id="person-placeholder" style="color:var(--text3);font-size:13px;padding:2px 0;line-height:1.6">リストから選択してください…</span>
@@ -1028,6 +1123,14 @@ function getFormBodyHTML(){
       <label>宿泊金額 (円) <span style="color:var(--red)">*</span></label>
       <input type="text" id="f-amount" placeholder="例：8800" inputmode="numeric">
     </div>`;
+}
+function onPrefChange(){
+  const pref=document.getElementById('f-pref').value;
+  const sel=document.getElementById('f-hotel');
+  if(!pref){sel.innerHTML='<option value="">― 都道府県を先に選択 ―</option>';sel.disabled=true;return;}
+  const list=hotels.filter(h=>h.pref===pref);
+  sel.innerHTML='<option value="">― ホテルを選択 ―</option>'+list.map(h=>`<option value="${esc(h.name)}">${esc(h.name)}</option>`).join('');
+  sel.disabled=false;
 }
 
 function openAddModal(){
@@ -1050,6 +1153,12 @@ function editRecord(id){
   const t=document.getElementById('f-date-text');
   t.textContent=`${fmtDate(r.startDate)} — ${fmtDate(r.endDate)}`;t.style.color='var(--text)';
   document.getElementById('f-date-display').classList.add('selected');
+  // 都道府県を特定してカスケード選択
+  const hotelObj=hotels.find(h=>h.name===r.hotel);
+  if(hotelObj){
+    document.getElementById('f-pref').value=hotelObj.pref;
+    onPrefChange();
+  }
   document.getElementById('f-hotel').value=r.hotel;
   document.getElementById('f-amount').value=r.amount;
   document.getElementById('form-footer').innerHTML=`
@@ -1063,7 +1172,7 @@ function submitRecord(){
   const proj=document.getElementById('f-project').value.trim();
   const hotel=document.getElementById('f-hotel').value.trim();
   const amount=parseInt(document.getElementById('f-amount').value.replace(/[^\d]/g,''));
-  if(!proj){toast('業務名を入力してください','error');return;}
+  if(!proj){toast('業務名を選択してください','error');return;}
   if(!calStart){toast('宿泊日を選択してください','error');return;}
   if(!hotel){toast('宿泊先を選択してください','error');return;}
   if(!selectedPersons.length){toast('宿泊者を選択してください','error');return;}
@@ -1111,9 +1220,9 @@ function toast(msg,type=''){
 }
 
 function init(){
-  // 初回起動時はExcelデータをlocalStorageに保存
-  if(!localStorage.getItem('fd_persons')) localStorage.setItem('fd_persons', JSON.stringify(persons));
-  if(!localStorage.getItem('fd_hotels'))  localStorage.setItem('fd_hotels',  JSON.stringify(hotels));
+  if(!localStorage.getItem('fd_persons'))  localStorage.setItem('fd_persons',  JSON.stringify(persons));
+  if(!localStorage.getItem('fd_hotels_v2'))localStorage.setItem('fd_hotels_v2',JSON.stringify(hotels));
+  if(!localStorage.getItem('fd_projects')) localStorage.setItem('fd_projects', JSON.stringify(projectsMaster));
   const sbUrl=localStorage.getItem('fd_sb_url');
   const sbKey=localStorage.getItem('fd_sb_key');
   if(sbUrl)document.getElementById('sb-url').value=sbUrl;
