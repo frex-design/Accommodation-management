@@ -729,16 +729,17 @@ function getSbConfig(){
 async function sbFetch(path, options={}){
   const cfg=getSbConfig();
   if(!cfg) return null;
-  const res=await fetch(`${cfg.url}/rest/v1/${path}`,{
-    ...options,
-    headers:{
-      'apikey':cfg.key,
-      'Authorization':`Bearer ${cfg.key}`,
-      'Content-Type':'application/json',
-      'Prefer': options.prefer||'',
-      ...options.headers
-    }
-  });
+  const prefer = options.prefer||'';
+  const headers={
+    'apikey':cfg.key,
+    'Authorization':`Bearer ${cfg.key}`,
+    'Content-Type':'application/json',
+  };
+  if(prefer) headers['Prefer']=prefer;
+  if(options.headers) Object.assign(headers, options.headers);
+  const fetchOpts={...options, headers};
+  delete fetchOpts.prefer;
+  const res=await fetch(`${cfg.url}/rest/v1/${path}`, fetchOpts);
   if(!res.ok){
     const txt=await res.text();
     throw new Error(`${res.status}: ${txt}`);
@@ -751,21 +752,21 @@ async function sbFetch(path, options={}){
 async function loadFromSupabase(){
   try{
     const data=await sbFetch('accommodations?select=*&order=start_date.desc');
-    if(data){
+    if(Array.isArray(data)){
       records=data.map(r=>({
-        id:           r.id,
-        projectName:  r.project_name,
-        startDate:    r.start_date,
-        endDate:      r.end_date,
-        hotel:        r.hotel,
-        persons:      r.persons,
-        amount:       r.amount
+        id:          r.id,
+        projectName: r.project_name,
+        startDate:   r.start_date,
+        endDate:     r.end_date,
+        hotel:       r.hotel,
+        persons:     r.persons,
+        amount:      r.amount
       }));
       localStorage.setItem('fd_records',JSON.stringify(records));
       return true;
     }
   }catch(e){
-    console.warn('Supabase読み込み失敗、localStorageを使用します:', e.message);
+    console.warn('Supabase読み込み失敗:', e.message);
   }
   return false;
 }
@@ -1279,7 +1280,7 @@ function editRecord(id){
   document.getElementById('form-modal').classList.add('show');
 }
 
-function submitRecord(){
+async function submitRecord(){
   const proj=document.getElementById('f-project').value.trim();
   const hotel=document.getElementById('f-hotel').value.trim();
   const amount=parseInt(document.getElementById('f-amount').value.replace(/[^\d]/g,''));
@@ -1294,24 +1295,43 @@ function submitRecord(){
     projectName:proj,startDate:calStart,endDate:calEnd,hotel,persons:[...selectedPersons],amount
   };
   if(editingId){
+    // ローカルを先に更新
     records[records.findIndex(r=>r.id===editingId)]=record;
     save();
-    updateToSupabase(record);
+    closeModal('form-modal');
     toast('更新しました');
+    // Supabase更新後に最新データを再取得
+    if(getSbConfig()){
+      await updateToSupabase(record);
+      await loadFromSupabase();
+    }
   } else {
+    // ローカルを先に追加
     records.push(record);
     save();
-    insertToSupabase(record);
+    closeModal('form-modal');
     toast('登録しました');
+    // Supabase登録後に最新データを再取得
+    if(getSbConfig()){
+      await insertToSupabase(record);
+      await loadFromSupabase();
+    }
   }
-  closeModal('form-modal');renderList();
+  renderList();
 }
 
 function deleteRecord(id){deletingId=id;document.getElementById('delete-modal').classList.add('show');}
-function confirmDelete(){
-  deleteFromSupabase(deletingId);
-  records=records.filter(r=>r.id!==deletingId);
-  save();closeModal('delete-modal');renderList();toast('削除しました');
+async function confirmDelete(){
+  const id=deletingId;
+  records=records.filter(r=>r.id!==id);
+  save();
+  closeModal('delete-modal');
+  toast('削除しました');
+  if(getSbConfig()){
+    await deleteFromSupabase(id);
+    await loadFromSupabase();
+  }
+  renderList();
 }
 function closeModal(id){document.getElementById(id).classList.remove('show');}
 
