@@ -80,7 +80,7 @@
   .brand-name {
     font-family: 'Nunito', sans-serif;
     font-weight: 800;
-    font-size: 16px;
+    font-size: 15px;
     color: #fff;
     letter-spacing: 0.01em;
     white-space: nowrap;
@@ -92,11 +92,10 @@
     margin: 0 18px;
   }
   .brand-sub {
-    font-size: 10px;
+    font-size: 19px;
     color: rgba(255,255,255,0.85);
-    font-weight: 400;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
+    font-weight: 600;
+    letter-spacing: 0.04em;
   }
   .header-actions { display: flex; gap: 10px; align-items: center; }
 
@@ -108,13 +107,13 @@
     border-bottom: 1px solid rgba(255,255,255,0.05);
   }
   .tab {
-    padding: 11px 20px;
+    padding: 12px 22px;
     cursor: pointer;
     color: rgba(255,255,255,0.38);
     font-family: 'Nunito', sans-serif;
-    font-size: 11px;
+    font-size: 13px;
     font-weight: 600;
-    letter-spacing: 0.07em;
+    letter-spacing: 0.05em;
     border-bottom: 2px solid transparent;
     transition: all 0.18s;
     user-select: none;
@@ -147,13 +146,13 @@
   }
   .card-title {
     font-family: 'Nunito', sans-serif;
-    font-size: 11px;
+    font-size: 13px;
     font-weight: 700;
     color: var(--navy);
     display: flex;
     align-items: center;
     gap: 10px;
-    letter-spacing: 0.08em;
+    letter-spacing: 0.04em;
     text-transform: uppercase;
   }
   .card-title .icon {
@@ -213,9 +212,9 @@
   .form-group.full { grid-column: 1/-1; }
   label {
     font-family: 'Nunito', sans-serif;
-    font-size: 10px; font-weight: 700;
+    font-size: 13px; font-weight: 700;
     color: var(--text3);
-    letter-spacing: 0.09em; text-transform: uppercase;
+    letter-spacing: 0.05em; text-transform: uppercase;
   }
   input, select, textarea {
     background: var(--surface2); border: 1px solid var(--border);
@@ -285,8 +284,8 @@
   table { width: 100%; border-collapse: collapse; font-size: 13px; }
   thead th {
     background: var(--surface2); padding: 9px 14px; text-align: left;
-    font-family: 'Nunito', sans-serif; font-size: 10px; font-weight: 700;
-    color: var(--text3); letter-spacing: 0.09em; text-transform: uppercase;
+    font-family: 'Nunito', sans-serif; font-size: 13px; font-weight: 700;
+    color: var(--text3); letter-spacing: 0.05em; text-transform: uppercase;
     border-bottom: 2px solid var(--border); white-space: nowrap;
   }
   tbody tr { border-bottom: 1px solid var(--border); transition: background 0.1s; }
@@ -321,8 +320,8 @@
     height: 3px; background: var(--navy);
   }
   .stat-card .label {
-    font-family: 'Nunito', sans-serif; font-size: 10px; color: var(--text3);
-    letter-spacing: 0.09em; text-transform: uppercase; margin-bottom: 10px; font-weight: 700;
+    font-family: 'Nunito', sans-serif; font-size: 13px; color: var(--text3);
+    letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 10px; font-weight: 700;
   }
   .stat-card .value {
     font-family: 'JetBrains Mono', monospace; font-size: 24px;
@@ -349,7 +348,7 @@
     to   { opacity: 1; transform: translateY(0) scale(1); }
   }
   .modal-title {
-    font-family: 'Nunito', sans-serif; font-size: 17px; font-weight: 700;
+    font-family: 'Nunito', sans-serif; font-size: 19px; font-weight: 700;
     color: var(--navy); margin-bottom: 22px;
     display: flex; align-items: center; justify-content: space-between;
   }
@@ -375,7 +374,7 @@
   .cal-months { display: flex; gap: 20px; }
   .cal-month { flex: 1; }
   .cal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
-  .cal-title { font-family: 'Nunito', sans-serif; font-size: 13px; font-weight: 700; color: var(--navy); }
+  .cal-title { font-family: 'Nunito', sans-serif; font-size: 14px; font-weight: 700; color: var(--navy); }
   .cal-nav {
     background: var(--surface2); border: 1px solid var(--border); color: var(--text2);
     cursor: pointer; font-size: 14px; padding: 3px 8px; border-radius: 4px; transition: all 0.1s;
@@ -383,8 +382,8 @@
   .cal-nav:hover { background: var(--silver); color: var(--navy); }
   .cal-grid { display: grid; grid-template-columns: repeat(7,1fr); gap: 2px; }
   .cal-dow {
-    text-align: center; font-family: 'Nunito', sans-serif; font-size: 9px; font-weight: 700;
-    color: var(--text3); padding: 4px 0 6px; letter-spacing: 0.06em;
+    text-align: center; font-family: 'Nunito', sans-serif; font-size: 11px; font-weight: 700;
+    color: var(--text3); padding: 4px 0 6px; letter-spacing: 0.04em;
   }
   .cal-day {
     text-align: center; padding: 5px 2px;
@@ -414,11 +413,11 @@
     display: flex; align-items: center; gap: 10px;
     background: var(--surface2); border: 1px solid var(--border);
     border-radius: var(--radius); padding: 6px 14px;
-    font-size: 12px; font-weight: 500; color: var(--text2); user-select: none;
+    font-size: 13px; font-weight: 500; color: var(--text2); user-select: none;
   }
-  .fy-btn { background: transparent; border: none; color: var(--text3); cursor: pointer; font-size: 15px; padding: 0 4px; transition: color 0.12s; }
+  .fy-btn { background: transparent; border: none; color: var(--text3); cursor: pointer; font-size: 16px; padding: 0 4px; transition: color 0.12s; }
   .fy-btn:hover { color: var(--navy); }
-  .fy-year { font-family: 'JetBrains Mono', monospace; font-size: 14px; color: var(--navy); font-weight: 500; }
+  .fy-year { font-family: 'JetBrains Mono', monospace; font-size: 15px; color: var(--navy); font-weight: 500; }
 
   /* ── UPLOAD ── */
   .upload-zone {
@@ -530,7 +529,7 @@
         <div class="fy-selector">
           <button class="fy-btn" onclick="changeFY(-1)">◀</button>
           <span class="fy-year" id="fy-label"></span>
-          <span style="font-size:11px;color:var(--text3)">年度</span>
+          <span style="font-size:13px;color:var(--text3)">年度</span>
           <button class="fy-btn" onclick="changeFY(1)">▶</button>
         </div>
       </div>
@@ -587,7 +586,7 @@
           <input type="text" id="person-manual" placeholder="氏名を入力して追加">
           <button class="btn btn-secondary" onclick="addPersonManual()">追加</button>
         </div>
-        <div id="persons-count" style="font-size:11px;color:var(--text3)"></div>
+        <div id="persons-count" style="font-size:13px;color:var(--text3)"></div>
       </div>
       <!-- 業務名マスタ -->
       <div class="card" style="margin-bottom:0">
@@ -598,7 +597,7 @@
           <input type="text" id="project-manual" placeholder="業務名を入力して追加">
           <button class="btn btn-secondary" onclick="addProjectManual()">追加</button>
         </div>
-        <div id="projects-count" style="font-size:11px;color:var(--text3)"></div>
+        <div id="projects-count" style="font-size:13px;color:var(--text3)"></div>
       </div>
       <!-- 宿泊先マスタ（都道府県別） -->
       <div class="card" style="margin-bottom:0">
@@ -616,7 +615,7 @@
           <input type="text" id="hotel-name-manual" placeholder="宿泊先名称">
         </div>
         <button class="btn btn-secondary" style="width:100%" onclick="addHotelManual()">追加</button>
-        <div id="hotels-count" style="font-size:11px;color:var(--text3);margin-top:8px"></div>
+        <div id="hotels-count" style="font-size:13px;color:var(--text3);margin-top:8px"></div>
       </div>
     </div>
 
@@ -638,7 +637,7 @@
         <span id="sb-status" style="font-size:12px;color:var(--text3)"></span>
       </div>
       <div class="divider"></div>
-      <div style="font-size:12px;color:var(--text2);font-weight:600;margin-bottom:2px">テーブル作成 SQL</div>
+      <div style="font-size:13px;color:var(--text2);font-weight:600;margin-bottom:2px">テーブル作成 SQL</div>
       <div class="sql-block">
         <span class="sql-k">CREATE TABLE</span> accommodations (<br>
         &nbsp;&nbsp;id <span class="sql-v">uuid</span> DEFAULT gen_random_uuid() <span class="sql-k">PRIMARY KEY</span>,<br>
