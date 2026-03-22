@@ -632,7 +632,7 @@ function personRow(s,cdMap,mSpans,allH){
       const si=Math.max(0,dayIdx(b.start));if(si!==di)return;
       const ei=Math.min(days.length-1,dayIdx(b.end)),w=(ei-si+1)*COL-2,c=jc(b.jobId);
       const jn=(jobs.find(x=>x.id===b.jobId)||{name:'?'}).name,sn=jn.length>5?jn.slice(0,5)+'…':jn;
-      ins+=`<div class="${barCls}" id="bar-${b.id}" style="left:1px;top:${barTop}px;height:${barH}px;width:${w}px;background:${c.bg};color:${c.txt};font-size:${isStaff?'12px':'10px'};" data-bid="${b.id}" data-staff="${s.id}" onmouseenter="showTip(event,${b.id})" onmouseleave="hideTip()">
+      ins+=`<div class="${barCls}" id="bar-${b.id}" style="left:1px;top:${barTop}px;height:${barH}px;width:${w}px;background:${c.bg};color:${c.txt};font-size:${isStaff?'12px':'10px'};" data-bid="${b.id}" data-staff="${s.id}" onmouseenter="showTip(event,${b.id})" onmouseleave="hideTip()" onclick="handleBarClick(event,${b.id})">
         <div class="rh" data-bid="${b.id}" data-side="l">|</div>
         <div class="bar-label">${isStaff?b.phase+' / '+sn:cat==='bossy'?b.phase+' / '+sn:sn}</div>
         <div class="rh" data-bid="${b.id}" data-side="r">|</div>
@@ -661,7 +661,7 @@ function carRow(car,mSpans,allH){
       const si=Math.max(0,dayIdx(b.start));if(si!==di)return;
       const ei=Math.min(days.length-1,dayIdx(b.end)),w=(ei-si+1)*COL-2,c=jc(b.jobId);
       const jn=(jobs.find(x=>x.id===b.jobId)||{name:'?'}).name,sn=jn.length>7?jn.slice(0,7)+'…':jn;
-      ins+=`<div class="bar-sm" id="carbar-${b.id}" style="left:1px;width:${w}px;background:${c.bg};color:${c.txt};" data-cbid="${b.id}" data-car="${car.id}" onmouseenter="showCarTip(event,${b.id})" onmouseleave="hideTip()">
+      ins+=`<div class="bar-sm" id="carbar-${b.id}" style="left:1px;width:${w}px;background:${c.bg};color:${c.txt};" data-cbid="${b.id}" data-car="${car.id}" onmouseenter="showCarTip(event,${b.id})" onmouseleave="hideTip()" onclick="handleCarBarClick(event,${b.id})">
         <div class="rh" data-cbid="${b.id}" data-side="l">|</div>
         <div class="bar-label">${sn}</div>
         <div class="rh" data-cbid="${b.id}" data-side="r">|</div>
@@ -722,22 +722,17 @@ function initDrag(){
       }
     });
     inner.addEventListener('click',e=>{
-      if(dragState) return; // ドラッグ中・ドラッグ直後はスキップ
-      const barEl=e.target.closest('.bar,.bar-sm'),rh=e.target.closest('.rh'),cell=e.target.closest('.day-cell,.day-cell-sm');
+      if(dragState) return;
+      const barEl=e.target.closest('.bar,.bar-sm');
+      if(barEl) return; // バーはonclickで処理済み
+      const rh=e.target.closest('.rh');
       if(rh) return;
-      if(barEl){
-        const cbid=barEl.dataset.cbid;
-        if(cbid){openCarBarDetail(parseInt(cbid));return;}
-        const bid=barEl.dataset.bid;
-        if(bid){openBarDetail(parseInt(bid));return;}
-        return;
-      }
-      if(cell&&!barEl&&!rh){
+      const cell=e.target.closest('.day-cell,.day-cell-sm');
+      if(cell){
         const carId=cell.dataset.car;
         const di=parseInt(cell.dataset.di);
         if(carId){openCarBarModal({carId:parseInt(carId),start:ds(days[di]),end:ds(days[di])});return;}
         const sid=parseInt(cell.dataset.staff);
-        // 運転行の場合は運転登録モーダル
         if(partners.driver.find(x=>x.id===sid)){
           pendingBar={staffId:sid,start:ds(days[di]),end:ds(days[di])};
           openDriverBarModal();return;
@@ -789,11 +784,7 @@ function initDrag(){
     };
     if(dragState.type==='move'){
       if(!dragState.moved){
-        const {kind,bid,cbid}=dragState;
-        cleanup();dragState=null;
-        if(kind==='carbar')openCarBarDetail(cbid);
-        else openBarDetail(bid);
-        return;
+        cleanup();dragState=null;return;
       }
       cleanup();dragState=null;saveBarsToStore();renderSummary();renderGanttKeepScroll();return;
     }
@@ -802,7 +793,16 @@ function initDrag(){
     }
   });
 }
-function openNewBarModal(){
+function handleBarClick(e,bid){
+  e.stopPropagation();
+  if(dragState&&dragState.moved) return; // ドラッグ中は無視
+  openBarDetail(bid);
+}
+function handleCarBarClick(e,cbid){
+  e.stopPropagation();
+  if(dragState&&dragState.moved) return;
+  openCarBarDetail(cbid);
+}
   const p=allPersons().find(x=>x.id===pendingBar.staffId);
   document.getElementById('newBarInfo').textContent=`担当：${p?p.name:'—'}`;
   document.getElementById('nbJob').innerHTML=jobs.map(j=>`<option value="${j.id}">${j.name}</option>`).join('');
@@ -1191,6 +1191,7 @@ function dpClear(){
 }
 
 init();
+window.addEventListener('load',()=>setTimeout(()=>scrollToTarget(),300));
 </script>
 </body>
 </html>
