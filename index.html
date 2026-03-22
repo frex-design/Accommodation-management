@@ -771,16 +771,15 @@ async function loadFromSupabase(){
   return false;
 }
 
-// Supabaseへ1件INSERT
+// Supabaseへ1件INSERT（idはSupabase側で生成）
 async function insertToSupabase(record){
   const cfg=getSbConfig();
-  if(!cfg) return false;
+  if(!cfg) return null;
   try{
-    await sbFetch('accommodations',{
+    const result=await sbFetch('accommodations',{
       method:'POST',
-      prefer:'return=minimal',
+      prefer:'return=representation',
       body: JSON.stringify({
-        id:           record.id,
         project_name: record.projectName,
         start_date:   record.startDate,
         end_date:     record.endDate,
@@ -789,10 +788,11 @@ async function insertToSupabase(record){
         amount:       record.amount
       })
     });
-    return true;
+    // Supabaseが発行したuuidを返す
+    return (Array.isArray(result) && result[0]) ? result[0].id : null;
   }catch(e){
     toast('Supabase保存エラー: '+e.message,'error');
-    return false;
+    return null;
   }
 }
 
@@ -1281,43 +1281,53 @@ function editRecord(id){
 }
 
 async function submitRecord(){
-  const proj=document.getElementById('f-project').value.trim();
-  const hotel=document.getElementById('f-hotel').value.trim();
-  const amount=parseInt(document.getElementById('f-amount').value.replace(/[^\d]/g,''));
-  if(!proj){toast('業務名を選択してください','error');return;}
-  if(!calStart){toast('宿泊日を選択してください','error');return;}
-  if(!hotel){toast('宿泊先を選択してください','error');return;}
-  if(!selectedPersons.length){toast('宿泊者を選択してください','error');return;}
-  if(!amount||amount<=0){toast('金額を入力してください','error');return;}
-  if(!calEnd)calEnd=calStart;
-  const record={
-    id:editingId||Date.now().toString(36)+Math.random().toString(36).slice(2),
-    projectName:proj,startDate:calStart,endDate:calEnd,hotel,persons:[...selectedPersons],amount
+  const proj  = document.getElementById('f-project').value.trim();
+  const hotel = document.getElementById('f-hotel').value.trim();
+  const amount= parseInt(document.getElementById('f-amount').value.replace(/[^\d]/g,''));
+  if(!proj)  { toast('業務名を選択してください','error'); return; }
+  if(!calStart){ toast('宿泊日を選択してください','error'); return; }
+  if(!hotel) { toast('宿泊先を選択してください','error'); return; }
+  if(!selectedPersons.length){ toast('宿泊者を選択してください','error'); return; }
+  if(!amount||amount<=0){ toast('金額を入力してください','error'); return; }
+  if(!calEnd) calEnd=calStart;
+
+  const tempId = 'tmp_'+Date.now();
+  const record = {
+    id: editingId || tempId,
+    projectName: proj, startDate: calStart, endDate: calEnd,
+    hotel, persons: [...selectedPersons], amount
   };
+
   if(editingId){
-    // ローカルを先に更新
-    records[records.findIndex(r=>r.id===editingId)]=record;
+    // ── 更新 ──
+    records[records.findIndex(r=>r.id===editingId)] = record;
     save();
     closeModal('form-modal');
+    renderList();
     toast('更新しました');
-    // Supabase更新後に最新データを再取得
     if(getSbConfig()){
-      await updateToSupabase(record);
-      await loadFromSupabase();
+      const ok = await updateToSupabase(record);
+      if(ok) await loadFromSupabase();
+      renderList();
     }
   } else {
-    // ローカルを先に追加
+    // ── 新規登録 ──
     records.push(record);
     save();
     closeModal('form-modal');
+    renderList();
     toast('登録しました');
-    // Supabase登録後に最新データを再取得
     if(getSbConfig()){
-      await insertToSupabase(record);
-      await loadFromSupabase();
+      const sbId = await insertToSupabase(record);
+      if(sbId){
+        // ローカルの仮IDをSupabaseのuuidに置き換え
+        const idx = records.findIndex(r=>r.id===tempId);
+        if(idx>=0){ records[idx].id = sbId; save(); }
+        await loadFromSupabase();
+        renderList();
+      }
     }
   }
-  renderList();
 }
 
 function deleteRecord(id){deletingId=id;document.getElementById('delete-modal').classList.add('show');}
