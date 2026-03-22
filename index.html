@@ -1246,7 +1246,9 @@ function onPrefChange(){
 }
 
 function openAddModal(){
-  editingId=null;calStart=null;calEnd=null;calStep=0;selectedPersons=[];
+  // 全状態をリセット
+  editingId=null; calStart=null; calEnd=null; calStep=0; selectedPersons=[];
+  if(activeCal){ const c=document.getElementById(activeCal); if(c)c.classList.remove('show'); activeCal=null; }
   document.getElementById('modal-title-text').textContent='宿泊登録';
   document.getElementById('form-body').innerHTML=getFormBodyHTML();
   document.getElementById('form-footer').innerHTML=`
@@ -1336,14 +1338,24 @@ async function confirmDelete(){
   records=records.filter(r=>r.id!==id);
   save();
   closeModal('delete-modal');
+  renderList();
   toast('削除しました');
   if(getSbConfig()){
-    await deleteFromSupabase(id);
-    await loadFromSupabase();
+    const ok=await deleteFromSupabase(id);
+    if(ok){
+      await loadFromSupabase();
+      renderList();
+    }
   }
-  renderList();
 }
-function closeModal(id){document.getElementById(id).classList.remove('show');}
+function closeModal(id){
+  document.getElementById(id).classList.remove('show');
+  // フォームモーダルを閉じる時は状態もリセット
+  if(id==='form-modal'){
+    editingId=null; calStart=null; calEnd=null; calStep=0; selectedPersons=[];
+    if(activeCal){ const c=document.getElementById(activeCal); if(c)c.classList.remove('show'); activeCal=null; }
+  }
+}
 
 function saveSupabaseConfig(){
   localStorage.setItem('fd_sb_url',document.getElementById('sb-url').value.trim());
@@ -1367,7 +1379,12 @@ async function testSupabase(){
 
 function fmtDate(d){if(!d)return'';const[y,m,day]=d.split('-');return`${y}/${m}/${day}`;}
 function fmtYen(n){return(n||0).toLocaleString();}
-function dateDiff(s,e){const a=new Date(s),b=new Date(e);return Math.max(1,Math.round((b-a)/(1000*60*60*24)));}
+function dateDiff(s,e){
+  if(!s||!e) return 1;
+  const a=new Date(s), b=new Date(e);
+  const diff=Math.round((b-a)/(1000*60*60*24));
+  return diff<=0 ? 1 : diff;
+}
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
 function toast(msg,type=''){
   const el=document.createElement('div');
