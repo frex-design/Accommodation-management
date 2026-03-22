@@ -722,16 +722,16 @@ function initDrag(){
       }
     });
     inner.addEventListener('click',e=>{
+      if(dragState) return; // ドラッグ中・ドラッグ直後はスキップ
       const barEl=e.target.closest('.bar,.bar-sm'),rh=e.target.closest('.rh'),cell=e.target.closest('.day-cell,.day-cell-sm');
       if(rh) return;
-      if(barEl&&!dragState){
+      if(barEl){
         const cbid=barEl.dataset.cbid;
         if(cbid){openCarBarDetail(parseInt(cbid));return;}
         const bid=barEl.dataset.bid;
         if(bid){openBarDetail(parseInt(bid));return;}
         return;
       }
-      if(barEl&&dragState) return; // ドラッグ中はスキップ（mouseupで処理）
       if(cell&&!barEl&&!rh){
         const carId=cell.dataset.car;
         const di=parseInt(cell.dataset.di);
@@ -784,13 +784,13 @@ function initDrag(){
   document.addEventListener('mouseup',e=>{
     if(!dragState)return;
     const cleanup=()=>{
-      document.querySelectorAll('.bar.dragging').forEach(el=>el.classList.remove('dragging'));
+      document.querySelectorAll('.bar.dragging,.bar-sm.dragging').forEach(el=>el.classList.remove('dragging'));
       document.getElementById('dragGhost').style.display='none';
     };
     if(dragState.type==='move'){
       if(!dragState.moved){
         const {kind,bid,cbid}=dragState;
-        dragState=null;cleanup();
+        cleanup();dragState=null;
         if(kind==='carbar')openCarBarDetail(cbid);
         else openBarDetail(bid);
         return;
