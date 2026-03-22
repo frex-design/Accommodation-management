@@ -720,6 +720,118 @@ let editingId = null, deletingId = null, activeCal = null;
 let fiscalYear = getCurrentFY();
 
 function getCurrentFY(){const n=new Date();return n.getMonth()>=3?n.getFullYear():n.getFullYear()-1;}
+// ── SUPABASE HELPERS ──
+function getSbConfig(){
+  const url=(localStorage.getItem('fd_sb_url')||'').trim();
+  const key=(localStorage.getItem('fd_sb_key')||'').trim();
+  return (url && key) ? {url, key} : null;
+}
+async function sbFetch(path, options={}){
+  const cfg=getSbConfig();
+  if(!cfg) return null;
+  const res=await fetch(`${cfg.url}/rest/v1/${path}`,{
+    ...options,
+    headers:{
+      'apikey':cfg.key,
+      'Authorization':`Bearer ${cfg.key}`,
+      'Content-Type':'application/json',
+      'Prefer': options.prefer||'',
+      ...options.headers
+    }
+  });
+  if(!res.ok){
+    const txt=await res.text();
+    throw new Error(`${res.status}: ${txt}`);
+  }
+  const ct=res.headers.get('content-type')||'';
+  return ct.includes('json') ? res.json() : null;
+}
+
+// Supabaseからレコード全件取得
+async function loadFromSupabase(){
+  try{
+    const data=await sbFetch('accommodations?select=*&order=start_date.desc');
+    if(data){
+      records=data.map(r=>({
+        id:           r.id,
+        projectName:  r.project_name,
+        startDate:    r.start_date,
+        endDate:      r.end_date,
+        hotel:        r.hotel,
+        persons:      r.persons,
+        amount:       r.amount
+      }));
+      localStorage.setItem('fd_records',JSON.stringify(records));
+      return true;
+    }
+  }catch(e){
+    console.warn('Supabase読み込み失敗、localStorageを使用します:', e.message);
+  }
+  return false;
+}
+
+// Supabaseへ1件INSERT
+async function insertToSupabase(record){
+  const cfg=getSbConfig();
+  if(!cfg) return false;
+  try{
+    await sbFetch('accommodations',{
+      method:'POST',
+      prefer:'return=minimal',
+      body: JSON.stringify({
+        id:           record.id,
+        project_name: record.projectName,
+        start_date:   record.startDate,
+        end_date:     record.endDate,
+        hotel:        record.hotel,
+        persons:      record.persons,
+        amount:       record.amount
+      })
+    });
+    return true;
+  }catch(e){
+    toast('Supabase保存エラー: '+e.message,'error');
+    return false;
+  }
+}
+
+// Supabaseへ1件UPDATE
+async function updateToSupabase(record){
+  const cfg=getSbConfig();
+  if(!cfg) return false;
+  try{
+    await sbFetch(`accommodations?id=eq.${record.id}`,{
+      method:'PATCH',
+      prefer:'return=minimal',
+      body: JSON.stringify({
+        project_name: record.projectName,
+        start_date:   record.startDate,
+        end_date:     record.endDate,
+        hotel:        record.hotel,
+        persons:      record.persons,
+        amount:       record.amount
+      })
+    });
+    return true;
+  }catch(e){
+    toast('Supabase更新エラー: '+e.message,'error');
+    return false;
+  }
+}
+
+// Supabaseから1件DELETE
+async function deleteFromSupabase(id){
+  const cfg=getSbConfig();
+  if(!cfg) return false;
+  try{
+    await sbFetch(`accommodations?id=eq.${id}`,{method:'DELETE'});
+    return true;
+  }catch(e){
+    toast('Supabase削除エラー: '+e.message,'error');
+    return false;
+  }
+}
+
 function save(){
   localStorage.setItem('fd_records',  JSON.stringify(records));
   localStorage.setItem('fd_persons',  JSON.stringify(persons));
@@ -1181,19 +1293,32 @@ function submitRecord(){
     id:editingId||Date.now().toString(36)+Math.random().toString(36).slice(2),
     projectName:proj,startDate:calStart,endDate:calEnd,hotel,persons:[...selectedPersons],amount
   };
-  if(editingId){records[records.findIndex(r=>r.id===editingId)]=record;toast('更新しました');}
-  else{records.push(record);toast('登録しました');}
-  save();closeModal('form-modal');renderList();
+  if(editingId){
+    records[records.findIndex(r=>r.id===editingId)]=record;
+    save();
+    updateToSupabase(record);
+    toast('更新しました');
+  } else {
+    records.push(record);
+    save();
+    insertToSupabase(record);
+    toast('登録しました');
+  }
+  closeModal('form-modal');renderList();
 }
 
 function deleteRecord(id){deletingId=id;document.getElementById('delete-modal').classList.add('show');}
-function confirmDelete(){records=records.filter(r=>r.id!==deletingId);save();closeModal('delete-modal');renderList();toast('削除しました');}
+function confirmDelete(){
+  deleteFromSupabase(deletingId);
+  records=records.filter(r=>r.id!==deletingId);
+  save();closeModal('delete-modal');renderList();toast('削除しました');
+}
 function closeModal(id){document.getElementById(id).classList.remove('show');}
 
 function saveSupabaseConfig(){
   localStorage.setItem('fd_sb_url',document.getElementById('sb-url').value.trim());
   localStorage.setItem('fd_sb_key',document.getElementById('sb-key').value.trim());
-  toast('Supabase設定を保存しました');
+  toast('設定を保存しました。ページを再読み込みするとSupabaseからデータを取得します');
 }
 async function testSupabase(){
   const url=document.getElementById('sb-url').value.trim();
@@ -1202,8 +1327,10 @@ async function testSupabase(){
   if(!url||!key){st.textContent='URLとキーを入力してください';st.style.color='var(--red)';return;}
   st.textContent='接続中…';st.style.color='var(--text3)';
   try{
-    const res=await fetch(`${url}/rest/v1/accommodations?limit=1`,{headers:{'apikey':key,'Authorization':`Bearer ${key}`}});
-    if(res.ok){st.textContent='✓ 接続成功';st.style.color='var(--green)';}
+    const res=await fetch(`${url}/rest/v1/accommodations?select=count&limit=1`,{
+      headers:{'apikey':key,'Authorization':`Bearer ${key}`,'Prefer':'count=exact'}
+    });
+    if(res.ok){st.textContent='✓ 接続成功';st.style.color='var(--green)';toast('接続成功！「保存」を押して設定を確定してください');}
     else{st.textContent=`✗ エラー: ${res.status}`;st.style.color='var(--red)';}
   }catch(e){st.textContent='✗ 接続失敗: '+e.message;st.style.color='var(--red)';}
 }
@@ -1218,7 +1345,7 @@ function toast(msg,type=''){
   document.body.appendChild(el);setTimeout(()=>el.remove(),2800);
 }
 
-function init(){
+async function init(){
   if(!localStorage.getItem('fd_persons'))  localStorage.setItem('fd_persons',  JSON.stringify(persons));
   if(!localStorage.getItem('fd_hotels_v2'))localStorage.setItem('fd_hotels_v2',JSON.stringify(hotels));
   if(!localStorage.getItem('fd_projects')) localStorage.setItem('fd_projects', JSON.stringify(projectsMaster));
@@ -1226,6 +1353,12 @@ function init(){
   const sbKey=localStorage.getItem('fd_sb_key');
   if(sbUrl)document.getElementById('sb-url').value=sbUrl;
   if(sbKey)document.getElementById('sb-key').value=sbKey;
+  if(getSbConfig()){
+    toast('Supabaseからデータを読み込み中…');
+    const ok=await loadFromSupabase();
+    if(ok) toast('✓ Supabaseからデータを読み込みました');
+    else   toast('⚠ Supabase読み込み失敗。localStorageのデータを表示します','error');
+  }
   renderList();
 }
 init();
