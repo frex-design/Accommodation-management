@@ -417,7 +417,8 @@ function init(){
   const week=['日','月','火','水','木','金','土'];
   document.getElementById('todayDisp').textContent=
     `${now.getFullYear()}年${now.getMonth()+1}月${now.getDate()}日（${week[now.getDay()]}）`;
-  renderLegend();renderSummary();renderGantt();scrollToTarget();
+  renderLegend();renderSummary();renderGantt();
+  setTimeout(()=>scrollToTarget(),200);
 }
 function renderLegend(){
   const todayDStr=ds(new Date());
