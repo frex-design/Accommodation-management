@@ -728,11 +728,15 @@ function initDrag(){
     });
     inner.addEventListener('click',e=>{
       const barEl=e.target.closest('.bar,.bar-sm'),rh=e.target.closest('.rh'),cell=e.target.closest('.day-cell,.day-cell-sm');
+      if(rh) return;
       if(barEl&&!dragState){
         const cbid=barEl.dataset.cbid;
         if(cbid){openCarBarDetail(parseInt(cbid));return;}
-        openBarDetail(parseInt(barEl.dataset.bid));return;
+        const bid=barEl.dataset.bid;
+        if(bid){openBarDetail(parseInt(bid));return;}
+        return;
       }
+      if(barEl&&dragState) return; // ドラッグ中はスキップ（mouseupで処理）
       if(cell&&!barEl&&!rh){
         const carId=cell.dataset.car;
         const di=parseInt(cell.dataset.di);
@@ -753,7 +757,7 @@ function initDrag(){
     const ghost=document.getElementById('dragGhost');
     if(dragState.type==='move'){
       const dx=e.clientX-dragState.startX,delta=Math.round(dx/COL);
-      if(Math.abs(dx)>3)dragState.moved=true;
+      if(Math.abs(dx)>8)dragState.moved=true;
       const si=dayIdx(dragState.origStart),ei=dayIdx(dragState.origEnd),dur=ei-si;
       const nsi=Math.max(0,Math.min(days.length-1-dur,si+delta));
       dragState.b.start=ds(days[nsi]);dragState.b.end=ds(days[nsi+dur]);
