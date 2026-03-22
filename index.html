@@ -375,7 +375,7 @@ function renderGanttKeepScroll(){
   const main=document.getElementById('ganttMain');
   const scrollX=main?main.scrollLeft:0;
   renderGantt();
-  if(main)setTimeout(()=>{main.scrollLeft=scrollX;},100);
+  if(main)setTimeout(()=>{main.scrollLeft=scrollX;},150);
 }
 function scrollToTarget(){
   const now=new Date();
@@ -383,12 +383,10 @@ function scrollToTarget(){
   const main=document.getElementById('ganttMain');
   if(!main)return;
   if(YEAR===nowYear){
-    // 当年度：今日にスクロール
     const ti=days.findIndex(d=>ds(d)===todayStr);
-    if(ti>0)setTimeout(()=>{main.scrollLeft=Math.max(0,(ti-7)*COL);},60);
+    if(ti>0)setTimeout(()=>{main.scrollLeft=Math.max(0,(ti-7)*COL);},80);
   } else {
-    // 他年度：年度始め（4月1日）にスクロール
-    setTimeout(()=>{main.scrollLeft=0;},60);
+    setTimeout(()=>{main.scrollLeft=0;},80);
   }
 }
 function onYearChange(sel){
@@ -419,8 +417,7 @@ function init(){
   const week=['日','月','火','水','木','金','土'];
   document.getElementById('todayDisp').textContent=
     `${now.getFullYear()}年${now.getMonth()+1}月${now.getDate()}日（${week[now.getDay()]}）`;
-  // 提出日アラートはsummaryカードで表示
-  renderLegend();renderSummary();renderGantt();
+  renderLegend();renderSummary();renderGantt();scrollToTarget();
 }
 function renderLegend(){
   const todayDStr=ds(new Date());
@@ -570,9 +567,6 @@ function renderGantt(){
   const main=document.getElementById('ganttMain');
   hdr.onscroll=()=>{main.scrollLeft=hdr.scrollLeft;};
   main.onscroll=()=>{hdr.scrollLeft=main.scrollLeft;};
-
-  // スクロール位置制御
-  scrollToTarget();
 
   initDrag();
 }
