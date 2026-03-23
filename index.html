@@ -614,29 +614,34 @@
       <div class="divider"></div>
       <div style="font-size:13px;color:var(--text2);font-weight:600;margin-bottom:2px">テーブル作成 SQL（Supabase SQL Editorで実行）</div>
       <div class="sql-block">
-        <span class="sql-k">CREATE TABLE</span> accommodations (<br>
+        <span style="color:rgba(255,255,255,0.35)">-- accommodations は既存のため masters のみ追加作成</span><br>
+        <span class="sql-k">CREATE TABLE IF NOT EXISTS</span> masters (<br>
         &nbsp;&nbsp;id <span class="sql-v">uuid</span> DEFAULT gen_random_uuid() <span class="sql-k">PRIMARY KEY</span>,<br>
-        &nbsp;&nbsp;project_name <span class="sql-v">text</span> NOT NULL,<br>
-        &nbsp;&nbsp;start_date <span class="sql-v">date</span> NOT NULL,<br>
-        &nbsp;&nbsp;end_date <span class="sql-v">date</span> NOT NULL,<br>
-        &nbsp;&nbsp;hotel <span class="sql-v">text</span> NOT NULL,<br>
-        &nbsp;&nbsp;persons <span class="sql-v">text[]</span> NOT NULL,<br>
-        &nbsp;&nbsp;amount <span class="sql-v">integer</span> NOT NULL,<br>
-        &nbsp;&nbsp;created_at <span class="sql-v">timestamptz</span> DEFAULT now()<br>
-        );<br><br>
-        <span class="sql-k">CREATE TABLE</span> masters (<br>
-        &nbsp;&nbsp;id <span class="sql-v">uuid</span> DEFAULT gen_random_uuid() <span class="sql-k">PRIMARY KEY</span>,<br>
-        &nbsp;&nbsp;type <span class="sql-v">text</span> NOT NULL,<span style="color:rgba(255,255,255,0.35)"> -- 'person' | 'project' | 'hotel'</span><br>
+        &nbsp;&nbsp;type <span class="sql-v">text</span> NOT NULL,<br>
         &nbsp;&nbsp;value <span class="sql-v">text</span> NOT NULL,<br>
-        &nbsp;&nbsp;pref <span class="sql-v">text</span>,<span style="color:rgba(255,255,255,0.35)"> -- ホテルの都道府県（hotel のみ使用）</span><br>
+        &nbsp;&nbsp;pref <span class="sql-v">text</span>,<br>
         &nbsp;&nbsp;created_at <span class="sql-v">timestamptz</span> DEFAULT now()<br>
         );<br><br>
-        <span style="color:rgba(255,255,255,0.35)">-- RLS を無効化（社内ツールの場合）</span><br>
-        <span class="sql-k">ALTER TABLE</span> accommodations <span class="sql-k">ENABLE ROW LEVEL SECURITY</span>;<br>
+        <span style="color:rgba(255,255,255,0.35)">-- RLSを有効にして全操作を許可</span><br>
         <span class="sql-k">ALTER TABLE</span> masters <span class="sql-k">ENABLE ROW LEVEL SECURITY</span>;<br>
-        <span class="sql-k">CREATE POLICY</span> "allow_all" <span class="sql-k">ON</span> accommodations <span class="sql-k">FOR ALL USING</span> (true) <span class="sql-k">WITH CHECK</span> (true);<br>
-        <span class="sql-k">CREATE POLICY</span> "allow_all" <span class="sql-k">ON</span> masters <span class="sql-k">FOR ALL USING</span> (true) <span class="sql-k">WITH CHECK</span> (true);
+        <span class="sql-k">DROP POLICY IF EXISTS</span> allow_all <span class="sql-k">ON</span> masters;<br>
+        <span class="sql-k">CREATE POLICY</span> allow_all <span class="sql-k">ON</span> masters <span class="sql-k">FOR ALL TO anon USING</span> (true) <span class="sql-k">WITH CHECK</span> (true);
       </div>
+      <div style="margin-top:10px;display:flex;align-items:center;gap:10px">
+        <button class="btn btn-secondary btn-sm" onclick="copySql()">📋 SQLをコピー</button>
+        <span id="copy-status" style="font-size:12px;color:var(--green)"></span>
+      </div>
+      <textarea id="sql-plain" readonly style="position:absolute;left:-9999px;top:-9999px">CREATE TABLE IF NOT EXISTS masters (
+  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  type text NOT NULL,
+  value text NOT NULL,
+  pref text,
+  created_at timestamptz DEFAULT now()
+);
+
+ALTER TABLE masters ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS allow_all ON masters;
+CREATE POLICY allow_all ON masters FOR ALL TO anon USING (true) WITH CHECK (true);</textarea>
     </div>
   </div>
 
@@ -822,18 +827,32 @@ async function deleteFromSupabase(id){
 
 // ── マスタ Supabase 連携 ──
 async function loadMastersFromSupabase(){
+  const cfg=getSbConfig();
+  if(!cfg) return false;
   try{
-    const data=await sbFetch('masters?select=*&order=created_at.asc');
+    const res=await fetch(`${cfg.url}/rest/v1/masters?select=*&order=created_at.asc`,{
+      headers:{
+        'apikey':cfg.key,
+        'Authorization':`Bearer ${cfg.key}`,
+        'Content-Type':'application/json'
+      }
+    });
+    if(!res.ok){
+      const txt=await res.text();
+      // mastersテーブル未作成でも警告のみ（accommodationsは使える）
+      if(txt.includes('42P01')||txt.includes('does not exist')){
+        console.warn('mastersテーブルが未作成です。設定タブのSQLを実行してください');
+      }
+      return false;
+    }
+    const data=await res.json();
     if(!Array.isArray(data)) return false;
-    // persons
     const newPersons=data.filter(r=>r.type==='person').map(r=>r.value);
-    if(newPersons.length){ persons=newPersons; localStorage.setItem('fd_persons',JSON.stringify(persons)); }
-    // projects
+    if(newPersons.length>0){ persons=newPersons; localStorage.setItem('fd_persons',JSON.stringify(persons)); }
     const newProjects=data.filter(r=>r.type==='project').map(r=>r.value);
-    if(newProjects.length){ projectsMaster=newProjects; localStorage.setItem('fd_projects',JSON.stringify(projectsMaster)); }
-    // hotels
+    if(newProjects.length>0){ projectsMaster=newProjects; localStorage.setItem('fd_projects',JSON.stringify(projectsMaster)); }
     const newHotels=data.filter(r=>r.type==='hotel').map(r=>({pref:r.pref||'その他',name:r.value}));
-    if(newHotels.length){ hotels=newHotels; localStorage.setItem('fd_hotels_v2',JSON.stringify(hotels)); }
+    if(newHotels.length>0){ hotels=newHotels; localStorage.setItem('fd_hotels_v2',JSON.stringify(hotels)); }
     return true;
   }catch(e){
     console.warn('マスタ読み込み失敗:',e.message);
@@ -841,10 +860,31 @@ async function loadMastersFromSupabase(){
   }
 }
 async function addMasterToSupabase(type, value, pref=null){
+  const cfg=getSbConfig();
+  if(!cfg) return false;
   try{
     const body={type,value};
     if(pref) body.pref=pref;
-    await sbFetch('masters',{method:'POST',prefer:'return=minimal',body:JSON.stringify(body)});
+    const res=await fetch(`${cfg.url}/rest/v1/masters`,{
+      method:'POST',
+      headers:{
+        'apikey':cfg.key,
+        'Authorization':`Bearer ${cfg.key}`,
+        'Content-Type':'application/json',
+        'Prefer':'return=minimal'
+      },
+      body:JSON.stringify(body)
+    });
+    if(!res.ok){
+      const txt=await res.text();
+      // テーブル未作成の場合は案内メッセージ
+      if(txt.includes('42P01')||txt.includes('does not exist')){
+        toast('⚠ mastersテーブルが未作成です。設定タブのSQLを実行してください','error');
+      } else {
+        toast('マスタ保存エラー: '+res.status+' '+txt,'error');
+      }
+      return false;
+    }
     return true;
   }catch(e){
     toast('マスタ保存エラー: '+e.message,'error');
@@ -852,10 +892,28 @@ async function addMasterToSupabase(type, value, pref=null){
   }
 }
 async function deleteMasterFromSupabase(type, value, pref=null){
+  const cfg=getSbConfig();
+  if(!cfg) return false;
   try{
     let path=`masters?type=eq.${encodeURIComponent(type)}&value=eq.${encodeURIComponent(value)}`;
     if(pref) path+=`&pref=eq.${encodeURIComponent(pref)}`;
-    await sbFetch(path,{method:'DELETE'});
+    const res=await fetch(`${cfg.url}/rest/v1/${path}`,{
+      method:'DELETE',
+      headers:{
+        'apikey':cfg.key,
+        'Authorization':`Bearer ${cfg.key}`,
+        'Content-Type':'application/json'
+      }
+    });
+    if(!res.ok){
+      const txt=await res.text();
+      if(txt.includes('42P01')||txt.includes('does not exist')){
+        toast('⚠ mastersテーブルが未作成です。設定タブのSQLを実行してください','error');
+      } else {
+        toast('マスタ削除エラー: '+res.status,'error');
+      }
+      return false;
+    }
     return true;
   }catch(e){
     toast('マスタ削除エラー: '+e.message,'error');
@@ -993,8 +1051,10 @@ function showProjectDetail(name){
 }
 
 function renderMasterChips(){
-  // 宿泊者
-  document.getElementById('persons-chips').innerHTML=persons.map(p=>`<span class="chip">${esc(p)}</span>`).join('');
+  // 宿泊者（削除ボタン付き）
+  document.getElementById('persons-chips').innerHTML=persons.map(p=>
+    `<span class="chip" style="display:inline-flex;align-items:center;gap:4px">${esc(p)}<span onclick="removePerson('${esc(p)}')" style="cursor:pointer;color:var(--text3);font-size:10px" title="削除">✕</span></span>`
+  ).join('');
   document.getElementById('persons-count').textContent=`${persons.length}名登録済み`;
   // 宿泊先（都道府県別）
   const hotelsByPref=document.getElementById('hotels-by-pref');
@@ -1015,6 +1075,11 @@ function renderMasterChips(){
     pc.innerHTML=projectsMaster.map(p=>`<span class="chip" style="display:inline-flex;align-items:center;gap:4px">${esc(p)}<span onclick="removeProject('${esc(p)}')" style="cursor:pointer;color:var(--text3);font-size:10px" title="削除">✕</span></span>`).join('');
     document.getElementById('projects-count').textContent=`${projectsMaster.length}件登録済み`;
   }
+}
+function removePerson(name){
+  persons=persons.filter(p=>p!==name);
+  save(); renderMasterChips();
+  if(getSbConfig()) deleteMasterFromSupabase('person',name);
 }
 function removeHotel(pref,name){
   hotels=hotels.filter(h=>!(h.pref===pref&&h.name===name));
@@ -1353,6 +1418,14 @@ async function confirmDelete(){
       renderList();
     }
   }
+}
+function copySql(){
+  const ta=document.getElementById('sql-plain');
+  ta.select();
+  document.execCommand('copy');
+  const st=document.getElementById('copy-status');
+  st.textContent='✓ コピーしました';
+  setTimeout(()=>st.textContent='',2500);
 }
 function closeModal(id){
   document.getElementById(id).classList.remove('show');
