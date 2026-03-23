@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>出張宿泊管理システム | FRe:x Design inc.</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Nunito:wght@400;600;700;800&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
   :root {
     --bg:       #f0f2f5;
@@ -419,18 +418,6 @@
   .fy-btn:hover { color: var(--navy); }
   .fy-year { font-family: 'JetBrains Mono', monospace; font-size: 15px; color: var(--navy); font-weight: 500; }
 
-  /* ── UPLOAD ── */
-  .upload-zone {
-    border: 2px dashed var(--border); border-radius: var(--radius2); padding: 22px;
-    text-align: center; cursor: pointer; transition: all 0.15s;
-    color: var(--text3); background: var(--surface2);
-  }
-  .upload-zone:hover { border-color: var(--accent); color: var(--text2); background: rgba(26,86,219,0.03); }
-  .upload-zone input { display: none; }
-  .upload-zone .upload-icon { font-size: 22px; margin-bottom: 6px; opacity: 0.55; }
-  .upload-zone .upload-text { font-size: 13px; font-weight: 500; color: var(--text2); }
-  .upload-zone .upload-sub { font-size: 11px; color: var(--text3); margin-top: 4px; }
-
   /* ── CHIPS ── */
   .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
   .chip { background: var(--surface2); border: 1px solid var(--border); border-radius: 3px; padding: 3px 10px; font-size: 11px; font-weight: 500; color: var(--text2); }
@@ -574,12 +561,6 @@
       <!-- 宿泊者マスタ -->
       <div class="card" style="margin-bottom:0">
         <div class="card-header"><div class="card-title"><span class="icon">👤</span>宿泊者マスタ</div></div>
-        <label class="upload-zone" onclick="document.getElementById('persons-file').click()">
-          <div class="upload-icon">📥</div>
-          <div class="upload-text">Excelファイルをアップロード</div>
-          <div class="upload-sub">A列：氏名（1行目はヘッダーでもOK）</div>
-          <input type="file" id="persons-file" accept=".xlsx,.xls" onchange="loadPersons(event)">
-        </label>
         <div class="chips" id="persons-chips"></div>
         <div class="divider"></div>
         <div style="display:flex;gap:8px;margin-bottom:8px">
@@ -602,13 +583,7 @@
       <!-- 宿泊先マスタ（都道府県別） -->
       <div class="card" style="margin-bottom:0">
         <div class="card-header"><div class="card-title"><span class="icon">🏨</span>宿泊先マスタ</div></div>
-        <label class="upload-zone" onclick="document.getElementById('hotels-file').click()">
-          <div class="upload-icon">📥</div>
-          <div class="upload-text">Excelファイルをアップロード</div>
-          <div class="upload-sub">A列：都道府県 or ヘッダー、B列：宿泊先名</div>
-          <input type="file" id="hotels-file" accept=".xlsx,.xls" onchange="loadHotels(event)">
-        </label>
-        <div id="hotels-by-pref" style="margin-top:10px;max-height:220px;overflow-y:auto"></div>
+        <div id="hotels-by-pref" style="margin-top:4px;max-height:220px;overflow-y:auto"></div>
         <div class="divider"></div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
           <input type="text" id="hotel-pref-manual" placeholder="都道府県">
@@ -637,7 +612,7 @@
         <span id="sb-status" style="font-size:12px;color:var(--text3)"></span>
       </div>
       <div class="divider"></div>
-      <div style="font-size:13px;color:var(--text2);font-weight:600;margin-bottom:2px">テーブル作成 SQL</div>
+      <div style="font-size:13px;color:var(--text2);font-weight:600;margin-bottom:2px">テーブル作成 SQL（Supabase SQL Editorで実行）</div>
       <div class="sql-block">
         <span class="sql-k">CREATE TABLE</span> accommodations (<br>
         &nbsp;&nbsp;id <span class="sql-v">uuid</span> DEFAULT gen_random_uuid() <span class="sql-k">PRIMARY KEY</span>,<br>
@@ -648,7 +623,19 @@
         &nbsp;&nbsp;persons <span class="sql-v">text[]</span> NOT NULL,<br>
         &nbsp;&nbsp;amount <span class="sql-v">integer</span> NOT NULL,<br>
         &nbsp;&nbsp;created_at <span class="sql-v">timestamptz</span> DEFAULT now()<br>
-        );
+        );<br><br>
+        <span class="sql-k">CREATE TABLE</span> masters (<br>
+        &nbsp;&nbsp;id <span class="sql-v">uuid</span> DEFAULT gen_random_uuid() <span class="sql-k">PRIMARY KEY</span>,<br>
+        &nbsp;&nbsp;type <span class="sql-v">text</span> NOT NULL,<span style="color:rgba(255,255,255,0.35)"> -- 'person' | 'project' | 'hotel'</span><br>
+        &nbsp;&nbsp;value <span class="sql-v">text</span> NOT NULL,<br>
+        &nbsp;&nbsp;pref <span class="sql-v">text</span>,<span style="color:rgba(255,255,255,0.35)"> -- ホテルの都道府県（hotel のみ使用）</span><br>
+        &nbsp;&nbsp;created_at <span class="sql-v">timestamptz</span> DEFAULT now()<br>
+        );<br><br>
+        <span style="color:rgba(255,255,255,0.35)">-- RLS を無効化（社内ツールの場合）</span><br>
+        <span class="sql-k">ALTER TABLE</span> accommodations <span class="sql-k">ENABLE ROW LEVEL SECURITY</span>;<br>
+        <span class="sql-k">ALTER TABLE</span> masters <span class="sql-k">ENABLE ROW LEVEL SECURITY</span>;<br>
+        <span class="sql-k">CREATE POLICY</span> "allow_all" <span class="sql-k">ON</span> accommodations <span class="sql-k">FOR ALL USING</span> (true) <span class="sql-k">WITH CHECK</span> (true);<br>
+        <span class="sql-k">CREATE POLICY</span> "allow_all" <span class="sql-k">ON</span> masters <span class="sql-k">FOR ALL USING</span> (true) <span class="sql-k">WITH CHECK</span> (true);
       </div>
     </div>
   </div>
@@ -833,6 +820,49 @@ async function deleteFromSupabase(id){
   }
 }
 
+// ── マスタ Supabase 連携 ──
+async function loadMastersFromSupabase(){
+  try{
+    const data=await sbFetch('masters?select=*&order=created_at.asc');
+    if(!Array.isArray(data)) return false;
+    // persons
+    const newPersons=data.filter(r=>r.type==='person').map(r=>r.value);
+    if(newPersons.length){ persons=newPersons; localStorage.setItem('fd_persons',JSON.stringify(persons)); }
+    // projects
+    const newProjects=data.filter(r=>r.type==='project').map(r=>r.value);
+    if(newProjects.length){ projectsMaster=newProjects; localStorage.setItem('fd_projects',JSON.stringify(projectsMaster)); }
+    // hotels
+    const newHotels=data.filter(r=>r.type==='hotel').map(r=>({pref:r.pref||'その他',name:r.value}));
+    if(newHotels.length){ hotels=newHotels; localStorage.setItem('fd_hotels_v2',JSON.stringify(hotels)); }
+    return true;
+  }catch(e){
+    console.warn('マスタ読み込み失敗:',e.message);
+    return false;
+  }
+}
+async function addMasterToSupabase(type, value, pref=null){
+  try{
+    const body={type,value};
+    if(pref) body.pref=pref;
+    await sbFetch('masters',{method:'POST',prefer:'return=minimal',body:JSON.stringify(body)});
+    return true;
+  }catch(e){
+    toast('マスタ保存エラー: '+e.message,'error');
+    return false;
+  }
+}
+async function deleteMasterFromSupabase(type, value, pref=null){
+  try{
+    let path=`masters?type=eq.${encodeURIComponent(type)}&value=eq.${encodeURIComponent(value)}`;
+    if(pref) path+=`&pref=eq.${encodeURIComponent(pref)}`;
+    await sbFetch(path,{method:'DELETE'});
+    return true;
+  }catch(e){
+    toast('マスタ削除エラー: '+e.message,'error');
+    return false;
+  }
+}
+
 function save(){
   localStorage.setItem('fd_records',  JSON.stringify(records));
   localStorage.setItem('fd_persons',  JSON.stringify(persons));
@@ -988,66 +1018,42 @@ function renderMasterChips(){
 }
 function removeHotel(pref,name){
   hotels=hotels.filter(h=>!(h.pref===pref&&h.name===name));
-  save();renderMasterChips();
+  save(); renderMasterChips();
+  if(getSbConfig()) deleteMasterFromSupabase('hotel',name,pref);
 }
 function removeProject(name){
   projectsMaster=projectsMaster.filter(p=>p!==name);
-  save();renderMasterChips();
+  save(); renderMasterChips();
+  if(getSbConfig()) deleteMasterFromSupabase('project',name);
 }
 
-function loadPersons(e){
-  const file=e.target.files[0];if(!file)return;
-  const reader=new FileReader();
-  reader.onload=ev=>{
-    const wb=XLSX.read(ev.target.result,{type:'binary'});
-    const ws=wb.Sheets[wb.SheetNames[0]];
-    const rows=XLSX.utils.sheet_to_json(ws,{header:1});
-    const names=rows.flat().map(v=>String(v||'').trim()).filter(v=>v&&v!=='氏名'&&v!=='名前');
-    names.forEach(n=>{if(!persons.includes(n))persons.push(n);});
-    save();renderMasterChips();toast(`${names.length}名を読み込みました`);
-  };
-  reader.readAsBinaryString(file);
-}
 function addPersonManual(){
   const v=document.getElementById('person-manual').value.trim();if(!v)return;
-  if(!persons.includes(v)){persons.push(v);save();renderMasterChips();toast(`${v} を追加`);}
+  if(!persons.includes(v)){
+    persons.push(v);save();renderMasterChips();
+    toast(`${v} を追加`);
+    if(getSbConfig()) addMasterToSupabase('person',v);
+  }
   document.getElementById('person-manual').value='';
-}
-function loadHotels(e){
-  const file=e.target.files[0];if(!file)return;
-  const reader=new FileReader();
-  reader.onload=ev=>{
-    const wb=XLSX.read(ev.target.result,{type:'binary'});
-    const ws=wb.Sheets[wb.SheetNames[0]];
-    const rows=XLSX.utils.sheet_to_json(ws,{header:1});
-    let currentPref='その他'; let added=0;
-    rows.forEach(row=>{
-      const val=String(row[1]||row[0]||'').trim();
-      if(!val)return;
-      // 都道府県ヘッダー行の判定（ホテル名らしくない短い行）
-      const isHeader=['宮城','秋田','山形','岩手','青森','北海道','福島','新潟','その他'].includes(val)
-        || (val.length<=6 && !val.includes('ホテル') && !val.includes('イン') && !val.includes('旅館'));
-      if(isHeader){currentPref=val;return;}
-      if(val==='宿泊先'||val==='施設名')return;
-      const exists=hotels.some(h=>h.pref===currentPref&&h.name===val);
-      if(!exists){hotels.push({pref:currentPref,name:val});added++;}
-    });
-    save();renderMasterChips();toast(`${added}件の宿泊先を読み込みました`);
-  };
-  reader.readAsBinaryString(file);
 }
 function addHotelManual(){
   const pref=document.getElementById('hotel-pref-manual').value.trim();
   const name=document.getElementById('hotel-name-manual').value.trim();
   if(!pref||!name){toast('都道府県と宿泊先名を入力してください','error');return;}
   if(!hotels.some(h=>h.pref===pref&&h.name===name)){
-    hotels.push({pref,name});save();renderMasterChips();toast(`${name} を追加`);
+    hotels.push({pref,name});save();renderMasterChips();
+    toast(`${name} を追加`);
+    if(getSbConfig()) addMasterToSupabase('hotel',name,pref);
   }
   document.getElementById('hotel-name-manual').value='';
 }
 function addProjectManual(){
   const v=document.getElementById('project-manual').value.trim();if(!v)return;
-  if(!projectsMaster.includes(v)){projectsMaster.push(v);save();renderMasterChips();toast(`${v} を追加`);}
+  if(!projectsMaster.includes(v)){
+    projectsMaster.push(v);save();renderMasterChips();
+    toast(`${v} を追加`);
+    if(getSbConfig()) addMasterToSupabase('project',v);
+  }
   document.getElementById('project-manual').value='';
 }
 
@@ -1402,9 +1408,14 @@ async function init(){
   if(sbKey)document.getElementById('sb-key').value=sbKey;
   if(getSbConfig()){
     toast('Supabaseからデータを読み込み中…');
-    const ok=await loadFromSupabase();
-    if(ok) toast('✓ Supabaseからデータを読み込みました');
-    else   toast('⚠ Supabase読み込み失敗。localStorageのデータを表示します','error');
+    // マスタと宿泊記録を並行取得
+    const [masterOk, recordOk] = await Promise.all([
+      loadMastersFromSupabase(),
+      loadFromSupabase()
+    ]);
+    if(masterOk && recordOk) toast('✓ Supabaseからデータを読み込みました');
+    else if(!masterOk && !recordOk) toast('⚠ Supabase読み込み失敗。localStorageのデータを表示します','error');
+    else toast('✓ Supabaseからデータを読み込みました（一部ローカル）');
   }
   renderList();
 }
