@@ -1473,6 +1473,8 @@ function saveNotifyConfig(){
   localStorage.setItem('fd_notify_enabled',document.getElementById('notify-enabled').checked);
   toast('メール通知設定を保存しました');
 }
+const EDGE_FUNC_URL = 'https://grhqmuqzpjwiuyexasmm.supabase.co/functions/v1/resend-email';
+
 async function sendNotifyEmail(record){
   const cfg=getNotifyConfig();
   if(!cfg) return;
@@ -1486,17 +1488,15 @@ async function sendNotifyEmail(record){
     +`宿泊金額　：¥${fmtYen(record.amount)}\n\n`
     +`──\nFRe:x Design inc. 出張宿泊管理システム`;
   try{
-    const res=await fetch('https://api.resend.com/emails',{
+    const res=await fetch(EDGE_FUNC_URL,{
       method:'POST',
-      headers:{
-        'Authorization':`Bearer ${cfg.key}`,
-        'Content-Type':'application/json'
-      },
+      headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
         from: cfg.from,
-        to:   [cfg.to],
+        to:   cfg.to,
         subject,
-        text: body
+        text: body,
+        resend_key: cfg.key
       })
     });
     if(!res.ok){
@@ -1515,13 +1515,14 @@ async function testNotify(){
   if(!key||!from||!to){st.textContent='APIキー・送信元・送信先を入力してください';st.style.color='var(--red)';return;}
   st.textContent='送信中…';st.style.color='var(--text3)';
   try{
-    const res=await fetch('https://api.resend.com/emails',{
+    const res=await fetch(EDGE_FUNC_URL,{
       method:'POST',
-      headers:{'Authorization':`Bearer ${key}`,'Content-Type':'application/json'},
+      headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
-        from, to:[to],
+        from, to,
         subject:'【テスト】宿泊管理システム 通知確認',
-        text:'これはテスト送信です。メール通知が正常に設定されています。\n\nFRe:x Design inc. 出張宿泊管理システム'
+        text:'これはテスト送信です。メール通知が正常に設定されています。\n\nFRe:x Design inc. 出張宿泊管理システム',
+        resend_key: key
       })
     });
     if(res.ok){st.textContent='✓ テスト送信成功';st.style.color='var(--green)';}
