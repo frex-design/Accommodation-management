@@ -1039,10 +1039,14 @@ function renderStats(){
   const tmRecs=records.filter(r=>{const d=new Date(r.startDate);return d.getFullYear()===now.getFullYear()&&d.getMonth()===now.getMonth();});
   const tmTotal=tmRecs.reduce((s,r)=>s+r.amount,0);
   const projects=[...new Set(records.map(r=>r.projectName))].length;
+  // チェックイン前件数
+  const today=new Date(); today.setHours(0,0,0,0);
+  const upcomingCnt=records.filter(r=>{ const co=new Date(r.endDate); co.setHours(0,0,0,0); return co>=today; }).length;
   document.getElementById('summary-stats').innerHTML=`
     <div class="stat-card"><div class="label">総宿泊件数</div><div class="value">${cnt}</div><div class="sub">件</div></div>
     <div class="stat-card"><div class="label">累計宿泊金額</div><div class="value">¥${fmtYen(total)}</div><div class="sub">円</div></div>
     <div class="stat-card"><div class="label">今月の宿泊金額</div><div class="value">¥${fmtYen(tmTotal)}</div><div class="sub">${now.getMonth()+1}月分</div></div>
+    <div class="stat-card" style="border-top-color:#1a56db"><div class="label">チェックイン前</div><div class="value" style="color:#1a56db">${upcomingCnt}</div><div class="sub">件</div></div>
     <div class="stat-card"><div class="label">登録業務数</div><div class="value">${projects}</div><div class="sub">業務</div></div>
   `;
 }
