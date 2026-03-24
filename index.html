@@ -487,9 +487,10 @@
   <!-- LIST -->
   <div class="section active" id="tab-list">
     <div class="summary-grid" id="summary-stats"></div>
+    <!-- チェックイン前 -->
     <div class="card">
       <div class="card-header">
-        <div class="card-title"><span class="icon">📋</span>宿泊登録一覧</div>
+        <div class="card-title"><span class="icon">📋</span>宿泊登録一覧（チェックイン前）</div>
         <input type="text" id="search-input" placeholder="業務名・宿泊先・宿泊者で検索…" style="width:230px" oninput="renderList()">
       </div>
       <div class="table-wrapper">
@@ -502,7 +503,26 @@
         </table>
         <div id="list-empty" class="empty-state" style="display:none">
           <div class="empty-icon">🏨</div>
-          <p>宿泊登録がありません。「新規登録」から追加してください。</p>
+          <p>チェックイン前の宿泊登録はありません。</p>
+        </div>
+      </div>
+    </div>
+    <!-- 宿泊済 -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title"><span class="icon">✅</span>宿泊済（チェックアウト後）</div>
+      </div>
+      <div class="table-wrapper">
+        <table>
+          <thead><tr>
+            <th>業務名</th><th>宿泊日</th><th>泊数</th><th>宿泊先</th><th>宿泊者</th>
+            <th style="text-align:right">宿泊金額</th><th></th>
+          </tr></thead>
+          <tbody id="stayed-tbody"></tbody>
+        </table>
+        <div id="stayed-empty" class="empty-state" style="display:none">
+          <div class="empty-icon">📭</div>
+          <p>チェックアウト済みの記録はありません。</p>
         </div>
       </div>
     </div>
@@ -996,28 +1016,48 @@ function renderStats(){
 function renderList(){
   renderStats();
   const q=(document.getElementById('search-input')?.value||'').toLowerCase();
+  const today=new Date(); today.setHours(0,0,0,0);
   let data=records;
   if(q) data=data.filter(r=>r.projectName.toLowerCase().includes(q)||r.hotel.toLowerCase().includes(q)||r.persons.join(' ').toLowerCase().includes(q));
   data=[...data].sort((a,b)=>b.startDate.localeCompare(a.startDate));
-  const tbody=document.getElementById('list-tbody');
-  const empty=document.getElementById('list-empty');
-  if(!data.length){tbody.innerHTML='';empty.style.display='';return;}
-  empty.style.display='none';
-  tbody.innerHTML=data.map(r=>{
-    const nights=dateDiff(r.startDate,r.endDate);
-    return`<tr>
-      <td><span class="badge badge-blue">${esc(r.projectName)}</span></td>
-      <td class="td-mono">${fmtDate(r.startDate)} — ${fmtDate(r.endDate)}</td>
-      <td class="td-mono">${nights}泊</td>
-      <td>${esc(r.hotel)}</td>
-      <td>${r.persons.map(p=>`<span class="badge badge-orange">${esc(p)}</span>`).join(' ')}</td>
-      <td class="td-amount">¥${fmtYen(r.amount)}</td>
-      <td><div style="display:flex;gap:6px;justify-content:flex-end">
-        <button class="btn-icon" onclick="editRecord('${r.id}')" title="修正">✏️</button>
-        <button class="btn-icon" onclick="deleteRecord('${r.id}')" title="削除" style="color:var(--red)">🗑</button>
-      </div></td>
-    </tr>`;
-  }).join('');
+
+  // チェックアウト日（endDate）が今日より前 → 宿泊済
+  const upcoming = data.filter(r=>{ const co=new Date(r.endDate); co.setHours(0,0,0,0); return co>=today; });
+  const stayed   = data.filter(r=>{ const co=new Date(r.endDate); co.setHours(0,0,0,0); return co<today; });
+
+  // ── チェックイン前 ──
+  const tbody  = document.getElementById('list-tbody');
+  const empty  = document.getElementById('list-empty');
+  if(!upcoming.length){ tbody.innerHTML=''; empty.style.display=''; }
+  else{
+    empty.style.display='none';
+    tbody.innerHTML=upcoming.map(r=>buildRow(r)).join('');
+  }
+
+  // ── 宿泊済 ──
+  const stbody = document.getElementById('stayed-tbody');
+  const stempty= document.getElementById('stayed-empty');
+  if(!stayed.length){ stbody.innerHTML=''; stempty.style.display=''; }
+  else{
+    stempty.style.display='none';
+    stbody.innerHTML=stayed.map(r=>buildRow(r)).join('');
+  }
+}
+
+function buildRow(r){
+  const nights=dateDiff(r.startDate,r.endDate);
+  return`<tr>
+    <td><span class="badge badge-blue">${esc(r.projectName)}</span></td>
+    <td class="td-mono">${fmtDate(r.startDate)} — ${fmtDate(r.endDate)}</td>
+    <td class="td-mono">${nights}泊</td>
+    <td>${esc(r.hotel)}</td>
+    <td>${r.persons.map(p=>`<span class="badge badge-orange">${esc(p)}</span>`).join(' ')}</td>
+    <td class="td-amount">¥${fmtYen(r.amount)}</td>
+    <td><div style="display:flex;gap:6px;justify-content:flex-end">
+      <button class="btn-icon" onclick="editRecord('${r.id}')" title="修正">✏️</button>
+      <button class="btn-icon" onclick="deleteRecord('${r.id}')" title="削除" style="color:var(--red)">🗑</button>
+    </div></td>
+  </tr>`;
 }
 
 function renderMonthly(){
