@@ -459,6 +459,38 @@
   .divider { height: 1px; background: var(--border); margin: 16px 0; }
   .fy-month-row td:first-child { font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 500; color: var(--text2); }
   tfoot tr td { font-weight: 700; color: var(--navy); border-top: 2px solid var(--border2); }
+
+  /* ── 記帳ボタン ── */
+  .btn-journal {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 4px 11px; border-radius: 20px;
+    font-size: 11px; font-weight: 700; cursor: pointer;
+    border: 1.5px solid; transition: all 0.15s;
+    white-space: nowrap; font-family: 'Noto Sans JP', sans-serif;
+    letter-spacing: 0.02em; user-select: none;
+  }
+  .btn-journal.unjournaled {
+    background: rgba(180,83,9,0.08); color: #b45309;
+    border-color: rgba(180,83,9,0.3);
+  }
+  .btn-journal.unjournaled:hover {
+    background: rgba(180,83,9,0.16); border-color: #b45309;
+  }
+  .btn-journal.journaled {
+    background: rgba(10,124,74,0.09); color: var(--green);
+    border-color: rgba(10,124,74,0.3);
+  }
+  .btn-journal.journaled:hover {
+    background: rgba(10,124,74,0.16); border-color: var(--green);
+  }
+  .btn-journal.pop {
+    animation: pop-in 0.5s cubic-bezier(0.34,1.8,0.64,1);
+  }
+  @keyframes pop-in {
+    0%   { transform: scale(0.65); opacity: 0.4; }
+    55%  { transform: scale(1.2); }
+    100% { transform: scale(1);   opacity: 1; }
+  }
 </style>
 </head>
 <body>
@@ -809,7 +841,8 @@ async function loadFromSupabase(){
         endDate:     r.end_date,
         hotel:       r.hotel,
         persons:     r.persons,
-        amount:      r.amount
+        amount:      r.amount,
+        journaled:   r.journaled || false
       }));
       localStorage.setItem('fd_records',JSON.stringify(records));
       return true;
@@ -859,7 +892,8 @@ async function updateToSupabase(record){
         end_date:     record.endDate,
         hotel:        record.hotel,
         persons:      record.persons,
-        amount:       record.amount
+        amount:       record.amount,
+        journaled:    record.journaled || false
       })
     });
     return true;
@@ -1046,6 +1080,10 @@ function renderList(){
 
 function buildRow(r){
   const nights=dateDiff(r.startDate,r.endDate);
+  const journaled = r.journaled || false;
+  const jBtn = journaled
+    ? `<button class="btn-journal journaled" onclick="toggleJournal('${r.id}',this)" title="記帳済（クリックで戻す）">✓ 記帳済</button>`
+    : `<button class="btn-journal unjournaled" onclick="toggleJournal('${r.id}',this)" title="クリックで記帳済にする">未記帳</button>`;
   return`<tr>
     <td><span class="badge badge-blue">${esc(r.projectName)}</span></td>
     <td class="td-mono">${fmtDate(r.startDate)} — ${fmtDate(r.endDate)}</td>
@@ -1053,11 +1091,33 @@ function buildRow(r){
     <td>${esc(r.hotel)}</td>
     <td>${r.persons.map(p=>`<span class="badge badge-orange">${esc(p)}</span>`).join(' ')}</td>
     <td class="td-amount">¥${fmtYen(r.amount)}</td>
-    <td><div style="display:flex;gap:6px;justify-content:flex-end">
+    <td><div style="display:flex;gap:6px;justify-content:flex-end;align-items:center">
       <button class="btn-icon" onclick="editRecord('${r.id}')" title="修正">✏️</button>
       <button class="btn-icon" onclick="deleteRecord('${r.id}')" title="削除" style="color:var(--red)">🗑</button>
+      ${jBtn}
     </div></td>
   </tr>`;
+}
+
+function toggleJournal(id, btn){
+  const r = records.find(r=>r.id===id);
+  if(!r) return;
+  r.journaled = !r.journaled;
+  save();
+  // ボタンをアニメーション付きで切り替え
+  btn.classList.remove('pop');
+  void btn.offsetWidth; // reflow でアニメーションリセット
+  if(r.journaled){
+    btn.className='btn-journal journaled pop';
+    btn.innerHTML='✓ 記帳済';
+    btn.title='記帳済（クリックで戻す）';
+  } else {
+    btn.className='btn-journal unjournaled pop';
+    btn.innerHTML='未記帳';
+    btn.title='クリックで記帳済にする';
+  }
+  // Supabase更新
+  if(getSbConfig()) updateToSupabase(r);
 }
 
 function renderMonthly(){
