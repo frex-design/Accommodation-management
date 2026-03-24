@@ -1074,18 +1074,21 @@ function renderList(){
   if(!stayed.length){ stbody.innerHTML=''; stempty.style.display=''; }
   else{
     stempty.style.display='none';
-    stbody.innerHTML=stayed.map(r=>buildRow(r)).join('');
+    stbody.innerHTML=stayed.map(r=>buildRow(r,true)).join('');
   }
 }
 
-function buildRow(r){
+function buildRow(r, stayed=false){
   const nights=dateDiff(r.startDate,r.endDate);
   const journaled = r.journaled || false;
   const jBtn = journaled
     ? `<button class="btn-journal journaled" onclick="toggleJournal('${r.id}',this)" title="記帳済（クリックで戻す）">✓ 記帳済</button>`
     : `<button class="btn-journal unjournaled" onclick="toggleJournal('${r.id}',this)" title="クリックで記帳済にする">未記帳</button>`;
+  const projectBadge = stayed
+    ? `<span class="badge badge-green">${esc(r.projectName)}</span>`
+    : `<span class="badge badge-blue">${esc(r.projectName)}</span>`;
   return`<tr>
-    <td><span class="badge badge-blue">${esc(r.projectName)}</span></td>
+    <td>${projectBadge}</td>
     <td class="td-mono">${fmtDate(r.startDate)} — ${fmtDate(r.endDate)}</td>
     <td class="td-mono">${nights}泊</td>
     <td>${esc(r.hotel)}</td>
