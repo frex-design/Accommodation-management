@@ -503,6 +503,7 @@
     <span class="brand-sub">出張宿泊管理システム</span>
   </div>
   <div class="header-actions">
+    <button class="btn btn-secondary" onclick="openGuide()" style="background:rgba(255,255,255,0.08);border-color:rgba(255,255,255,0.18);color:#fff;">📖 操作ガイド</button>
     <button class="btn btn-primary" onclick="openAddModal()">＋ 新規登録</button>
   </div>
 </header>
@@ -661,6 +662,145 @@
     <div class="modal-footer" id="form-footer">
       <button class="btn btn-secondary" onclick="closeModal('form-modal')">キャンセル</button>
       <button class="btn btn-primary" onclick="submitRecord()">保存する</button>
+    </div>
+  </div>
+</div>
+
+<!-- GUIDE MODAL -->
+<div class="modal-overlay" id="guide-modal" onclick="closeGuideOnBg(event)">
+  <div class="modal" style="max-width:820px;padding:0;overflow:hidden">
+    <!-- ヘッダー -->
+    <div style="background:var(--navy);padding:22px 28px;display:flex;align-items:center;justify-content:space-between">
+      <div>
+        <div style="font-family:'Nunito',sans-serif;font-size:18px;font-weight:800;color:#fff;letter-spacing:0.01em">📖 操作ガイド</div>
+        <div style="font-size:11px;color:rgba(255,255,255,0.45);margin-top:3px;letter-spacing:0.06em;text-transform:uppercase">FRe:x Design inc. 出張宿泊管理システム</div>
+      </div>
+      <span class="modal-close" onclick="closeModal('guide-modal')" style="background:rgba(255,255,255,0.1);border-color:rgba(255,255,255,0.2);color:#fff">✕</span>
+    </div>
+    <!-- コンテンツ -->
+    <div style="padding:28px;max-height:72vh;overflow-y:auto">
+
+      <!-- 概要 -->
+      <div style="background:var(--surface2);border-radius:8px;padding:16px 20px;margin-bottom:24px;border-left:4px solid var(--navy)">
+        <p style="font-size:13px;color:var(--text2);line-height:1.9">
+          このシステムは<strong>出張時の宿泊予約を事前に会社へ報告</strong>し、経理・管理者が予算管理を行うためのツールです。<br>
+          登録したデータは全社員でリアルタイムに共有されます。
+        </p>
+      </div>
+
+      <!-- セクション：新規登録 -->
+      <div style="margin-bottom:28px">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+          <div style="background:var(--navy);color:#fff;border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0">1</div>
+          <div style="font-family:'Nunito',sans-serif;font-size:15px;font-weight:700;color:var(--navy)">宿泊を登録する</div>
+        </div>
+        <div style="padding-left:36px">
+          <p style="font-size:13px;color:var(--text2);line-height:1.9;margin-bottom:12px">右上の <strong style="background:var(--navy);color:#fff;padding:2px 8px;border-radius:4px;font-size:12px">＋ 新規登録</strong> ボタンをクリックして登録フォームを開きます。</p>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <div style="background:var(--surface2);border-radius:6px;padding:12px 14px">
+              <div style="font-size:11px;font-weight:700;color:var(--navy);letter-spacing:0.05em;text-transform:uppercase;margin-bottom:6px">対象業務名</div>
+              <div style="font-size:12px;color:var(--text2);line-height:1.7">設定タブで登録した業務名リストから選択します。</div>
+            </div>
+            <div style="background:var(--surface2);border-radius:6px;padding:12px 14px">
+              <div style="font-size:11px;font-weight:700;color:var(--navy);letter-spacing:0.05em;text-transform:uppercase;margin-bottom:6px">宿泊日</div>
+              <div style="font-size:12px;color:var(--text2);line-height:1.7">カレンダーアイコンをクリックして、チェックイン〜チェックアウト日を選択します。</div>
+            </div>
+            <div style="background:var(--surface2);border-radius:6px;padding:12px 14px">
+              <div style="font-size:11px;font-weight:700;color:var(--navy);letter-spacing:0.05em;text-transform:uppercase;margin-bottom:6px">宿泊先</div>
+              <div style="font-size:12px;color:var(--text2);line-height:1.7">都道府県を先に選択すると、その地域のホテルリストが表示されます。</div>
+            </div>
+            <div style="background:var(--surface2);border-radius:6px;padding:12px 14px">
+              <div style="font-size:11px;font-weight:700;color:var(--navy);letter-spacing:0.05em;text-transform:uppercase;margin-bottom:6px">宿泊者</div>
+              <div style="font-size:12px;color:var(--text2);line-height:1.7">ボックスをクリックでリストが表示されます。<strong>＋ 追加</strong>で複数名選択できます。</div>
+            </div>
+            <div style="background:var(--surface2);border-radius:6px;padding:12px 14px;grid-column:1/-1">
+              <div style="font-size:11px;font-weight:700;color:var(--navy);letter-spacing:0.05em;text-transform:uppercase;margin-bottom:6px">宿泊金額</div>
+              <div style="font-size:12px;color:var(--text2);line-height:1.7">1泊あたりの金額を半角数字で入力してください（例：8800）。</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- セクション：宿泊一覧 -->
+      <div style="margin-bottom:28px">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+          <div style="background:var(--navy);color:#fff;border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0">2</div>
+          <div style="font-family:'Nunito',sans-serif;font-size:15px;font-weight:700;color:var(--navy)">宿泊一覧を確認する</div>
+        </div>
+        <div style="padding-left:36px;display:flex;flex-direction:column;gap:10px">
+          <div style="background:var(--surface2);border-radius:6px;padding:12px 14px;display:flex;align-items:flex-start;gap:12px">
+            <span style="background:rgba(26,86,219,0.1);color:var(--accent);border:1px solid rgba(26,86,219,0.25);border-radius:3px;padding:2px 8px;font-size:11px;font-weight:700;white-space:nowrap">📋 チェックイン前</span>
+            <div style="font-size:12px;color:var(--text2);line-height:1.7">チェックアウト日がまだ来ていない登録を表示します。</div>
+          </div>
+          <div style="background:var(--surface2);border-radius:6px;padding:12px 14px;display:flex;align-items:flex-start;gap:12px">
+            <span style="background:rgba(10,124,74,0.08);color:var(--green);border:1px solid rgba(10,124,74,0.2);border-radius:3px;padding:2px 8px;font-size:11px;font-weight:700;white-space:nowrap">✅ 宿泊済</span>
+            <div style="font-size:12px;color:var(--text2);line-height:1.7">チェックアウト日が過ぎた登録が自動的にこちらへ移動します。</div>
+          </div>
+          <div style="background:var(--surface2);border-radius:6px;padding:12px 14px;display:flex;align-items:flex-start;gap:12px">
+            <span style="background:rgba(180,83,9,0.08);color:#b45309;border:1px solid rgba(180,83,9,0.25);border-radius:20px;padding:2px 10px;font-size:11px;font-weight:700;white-space:nowrap">未記帳</span>
+            <div style="font-size:12px;color:var(--text2);line-height:1.7">各行の右端にある「未記帳」ボタンをクリックすると「✓ 記帳済」に切り替わります。経理処理後にクリックしてください。</div>
+          </div>
+          <div style="background:var(--surface2);border-radius:6px;padding:12px 14px;display:flex;align-items:flex-start;gap:12px">
+            <span style="font-size:16px">✏️ 🗑</span>
+            <div style="font-size:12px;color:var(--text2);line-height:1.7">鉛筆アイコンで内容を修正、ゴミ箱アイコンで削除できます。</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- セクション：集計 -->
+      <div style="margin-bottom:28px">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+          <div style="background:var(--navy);color:#fff;border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0">3</div>
+          <div style="font-family:'Nunito',sans-serif;font-size:15px;font-weight:700;color:var(--navy)">集計を確認する</div>
+        </div>
+        <div style="padding-left:36px;display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div style="background:var(--surface2);border-radius:6px;padding:12px 14px">
+            <div style="font-size:11px;font-weight:700;color:var(--navy);letter-spacing:0.05em;text-transform:uppercase;margin-bottom:6px">📅 月別集計</div>
+            <div style="font-size:12px;color:var(--text2);line-height:1.7">4月〜翌3月の年度別に宿泊金額を集計します。◀▶で年度を切り替えられます。</div>
+          </div>
+          <div style="background:var(--surface2);border-radius:6px;padding:12px 14px">
+            <div style="font-size:11px;font-weight:700;color:var(--navy);letter-spacing:0.05em;text-transform:uppercase;margin-bottom:6px">🏗 業務別集計</div>
+            <div style="font-size:12px;color:var(--text2);line-height:1.7">業務ごとの合計金額と<strong>総人工</strong>（宿泊日数×宿泊人数の合計）を表示します。</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- セクション：設定 -->
+      <div style="margin-bottom:16px">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+          <div style="background:var(--navy);color:#fff;border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0">4</div>
+          <div style="font-family:'Nunito',sans-serif;font-size:15px;font-weight:700;color:var(--navy)">マスタを管理する（管理者のみ）</div>
+        </div>
+        <div style="padding-left:36px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
+          <div style="background:var(--surface2);border-radius:6px;padding:12px 14px">
+            <div style="font-size:11px;font-weight:700;color:var(--navy);letter-spacing:0.05em;text-transform:uppercase;margin-bottom:6px">👤 宿泊者</div>
+            <div style="font-size:12px;color:var(--text2);line-height:1.7">社員名を登録します。✕で削除できます。</div>
+          </div>
+          <div style="background:var(--surface2);border-radius:6px;padding:12px 14px">
+            <div style="font-size:11px;font-weight:700;color:var(--navy);letter-spacing:0.05em;text-transform:uppercase;margin-bottom:6px">🏗 業務名</div>
+            <div style="font-size:12px;color:var(--text2);line-height:1.7">業務名を登録します。新しい案件が始まったら追加してください。</div>
+          </div>
+          <div style="background:var(--surface2);border-radius:6px;padding:12px 14px">
+            <div style="font-size:11px;font-weight:700;color:var(--navy);letter-spacing:0.05em;text-transform:uppercase;margin-bottom:6px">🏨 宿泊先</div>
+            <div style="font-size:12px;color:var(--text2);line-height:1.7">都道府県とホテル名を入力して登録します。</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 注意事項 -->
+      <div style="background:rgba(192,57,43,0.06);border:1px solid rgba(192,57,43,0.2);border-radius:8px;padding:14px 18px">
+        <div style="font-size:12px;font-weight:700;color:var(--red);margin-bottom:6px">⚠️ ご注意</div>
+        <ul style="font-size:12px;color:var(--text2);line-height:2;padding-left:18px">
+          <li>登録・修正・削除は即座に全社員の画面に反映されます</li>
+          <li>削除したデータは元に戻せません</li>
+          <li>宿泊予約が確定したら、なるべく早めに登録してください</li>
+        </ul>
+      </div>
+
+    </div>
+    <!-- フッター -->
+    <div style="padding:16px 28px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;background:var(--surface2)">
+      <button class="btn btn-primary" onclick="closeModal('guide-modal')">閉じる</button>
     </div>
   </div>
 </div>
@@ -1479,6 +1619,12 @@ async function confirmDelete(){
   }
 }
 
+function openGuide(){
+  document.getElementById('guide-modal').classList.add('show');
+}
+function closeGuideOnBg(e){
+  if(e.target===document.getElementById('guide-modal')) closeModal('guide-modal');
+}
 function copySql(){
   const ta=document.getElementById('sql-plain');
   ta.select();
