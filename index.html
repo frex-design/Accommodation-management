@@ -695,42 +695,6 @@ DROP POLICY IF EXISTS allow_all ON masters;
 CREATE POLICY allow_all ON masters FOR ALL TO anon USING (true) WITH CHECK (true);</textarea>
     </div>
 
-    <!-- メール通知設定 -->
-    <div class="card">
-      <div class="card-header">
-        <div class="card-title"><span class="icon">✉️</span>メール通知設定</div>
-        <div style="display:flex;align-items:center;gap:8px">
-          <span style="font-size:12px;color:var(--text3)">通知</span>
-          <label style="display:flex;align-items:center;cursor:pointer;gap:6px;text-transform:none;font-size:12px;color:var(--text2);letter-spacing:0">
-            <input type="checkbox" id="notify-enabled" onchange="saveNotifyConfig()" style="width:auto;accent-color:var(--accent)">
-            有効
-          </label>
-        </div>
-      </div>
-      <div style="font-size:12px;color:var(--text3);margin-bottom:14px;line-height:1.7">
-        新規登録時に指定のメールアドレスへ通知を送ります。<br>
-        <a href="https://resend.com" target="_blank" style="color:var(--accent)">Resend</a> の無料アカウントを作成してAPIキーを取得してください（月3,000通まで無料）。
-      </div>
-      <div class="form-grid">
-        <div class="form-group">
-          <label>Resend API Key</label>
-          <input type="password" id="resend-key" placeholder="re_xxxxxxxxxxxx">
-        </div>
-        <div class="form-group">
-          <label>送信元メールアドレス</label>
-          <input type="text" id="notify-from" placeholder="noreply@yourdomain.com">
-        </div>
-        <div class="form-group full">
-          <label>通知先メールアドレス（管理者・経理）</label>
-          <input type="text" id="notify-to" placeholder="manager@flexdesign.co.jp">
-        </div>
-      </div>
-      <div style="margin-top:14px;display:flex;gap:10px;align-items:center">
-        <button class="btn btn-secondary" onclick="saveNotifyConfig()">保存</button>
-        <button class="btn btn-secondary" onclick="testNotify()">テスト送信</button>
-        <span id="notify-status" style="font-size:12px;color:var(--text3)"></span>
-      </div>
-    </div>
 
   </div><!-- /tab-settings -->
 
@@ -1544,8 +1508,6 @@ async function submitRecord(){
         renderList();
       }
     }
-    // メール通知
-    sendNotifyEmail(record);
   }
 }
 
@@ -1565,77 +1527,7 @@ async function confirmDelete(){
     }
   }
 }
-// ── メール通知 ──
-function getNotifyConfig(){
-  const key  = (localStorage.getItem('fd_resend_key')||'').trim();
-  const from = (localStorage.getItem('fd_notify_from')||'').trim();
-  const to   = (localStorage.getItem('fd_notify_to')||'').trim();
-  const enabled = localStorage.getItem('fd_notify_enabled')==='true';
-  return (enabled && key && from && to) ? {key,from,to} : null;
-}
-function saveNotifyConfig(){
-  localStorage.setItem('fd_resend_key',    document.getElementById('resend-key').value.trim());
-  localStorage.setItem('fd_notify_from',   document.getElementById('notify-from').value.trim());
-  localStorage.setItem('fd_notify_to',     document.getElementById('notify-to').value.trim());
-  localStorage.setItem('fd_notify_enabled',document.getElementById('notify-enabled').checked);
-  toast('メール通知設定を保存しました');
-}
-const EDGE_FUNC_URL = 'https://grhqmuqzpjwiuyexasmm.supabase.co/functions/v1/resend-email';
 
-async function sendNotifyEmail(record){
-  const cfg=getNotifyConfig();
-  if(!cfg) return;
-  const nights=dateDiff(record.startDate,record.endDate);
-  const subject=`【宿泊登録】${record.projectName} / ${fmtDate(record.startDate)}〜${fmtDate(record.endDate)}`;
-  const body=`宿泊登録がありました。\n\n`
-    +`業務名　　：${record.projectName}\n`
-    +`宿泊日　　：${fmtDate(record.startDate)} 〜 ${fmtDate(record.endDate)}（${nights}泊）\n`
-    +`宿泊先　　：${record.hotel}\n`
-    +`宿泊者　　：${record.persons.join('、')}\n`
-    +`宿泊金額　：¥${fmtYen(record.amount)}\n\n`
-    +`──\nFRe:x Design inc. 出張宿泊管理システム`;
-  try{
-    const res=await fetch(EDGE_FUNC_URL,{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({
-        from: cfg.from,
-        to:   cfg.to,
-        subject,
-        text: body,
-        resend_key: cfg.key
-      })
-    });
-    if(!res.ok){
-      const txt=await res.text();
-      console.warn('メール送信失敗:',txt);
-    }
-  }catch(e){
-    console.warn('メール送信エラー:',e.message);
-  }
-}
-async function testNotify(){
-  const key  = document.getElementById('resend-key').value.trim();
-  const from = document.getElementById('notify-from').value.trim();
-  const to   = document.getElementById('notify-to').value.trim();
-  const st   = document.getElementById('notify-status');
-  if(!key||!from||!to){st.textContent='APIキー・送信元・送信先を入力してください';st.style.color='var(--red)';return;}
-  st.textContent='送信中…';st.style.color='var(--text3)';
-  try{
-    const res=await fetch(EDGE_FUNC_URL,{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({
-        from, to,
-        subject:'【テスト】宿泊管理システム 通知確認',
-        text:'これはテスト送信です。メール通知が正常に設定されています。\n\nFRe:x Design inc. 出張宿泊管理システム',
-        resend_key: key
-      })
-    });
-    if(res.ok){st.textContent='✓ テスト送信成功';st.style.color='var(--green)';}
-    else{const t=await res.text();st.textContent='✗ 送信失敗: '+t;st.style.color='var(--red)';}
-  }catch(e){st.textContent='✗ エラー: '+e.message;st.style.color='var(--red)';}
-}
 function copySql(){
   const ta=document.getElementById('sql-plain');
   ta.select();
@@ -1696,15 +1588,6 @@ async function init(){
   const sbKey=localStorage.getItem('fd_sb_key');
   if(sbUrl)document.getElementById('sb-url').value=sbUrl;
   if(sbKey)document.getElementById('sb-key').value=sbKey;
-  // メール通知設定を復元
-  const rKey  =localStorage.getItem('fd_resend_key');
-  const rFrom =localStorage.getItem('fd_notify_from');
-  const rTo   =localStorage.getItem('fd_notify_to');
-  const rEn   =localStorage.getItem('fd_notify_enabled');
-  if(rKey)  document.getElementById('resend-key').value=rKey;
-  if(rFrom) document.getElementById('notify-from').value=rFrom;
-  if(rTo)   document.getElementById('notify-to').value=rTo;
-  if(rEn)   document.getElementById('notify-enabled').checked=(rEn==='true');
   if(getSbConfig()){
     toast('Supabaseからデータを読み込み中…');
     // マスタと宿泊記録を並行取得
