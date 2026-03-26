@@ -645,56 +645,6 @@
       </div>
     </div>
 
-    <div class="card">
-      <div class="card-header"><div class="card-title"><span class="icon">🔗</span>Supabase 接続設定</div></div>
-      <div class="form-grid">
-        <div class="form-group">
-          <label>Project URL</label>
-          <input type="text" id="sb-url" placeholder="https://xxxx.supabase.co">
-        </div>
-        <div class="form-group">
-          <label>Anon Key</label>
-          <input type="password" id="sb-key" placeholder="eyJ...">
-        </div>
-      </div>
-      <div style="margin-top:14px;display:flex;gap:10px;align-items:center">
-        <button class="btn btn-secondary" onclick="saveSupabaseConfig()">保存</button>
-        <button class="btn btn-secondary" onclick="testSupabase()">接続テスト</button>
-        <span id="sb-status" style="font-size:12px;color:var(--text3)"></span>
-      </div>
-      <div class="divider"></div>
-      <div style="font-size:13px;color:var(--text2);font-weight:600;margin-bottom:2px">テーブル作成 SQL（Supabase SQL Editorで実行）</div>
-      <div class="sql-block">
-        <span style="color:rgba(255,255,255,0.35)">-- accommodations は既存のため masters のみ追加作成</span><br>
-        <span class="sql-k">CREATE TABLE IF NOT EXISTS</span> masters (<br>
-        &nbsp;&nbsp;id <span class="sql-v">uuid</span> DEFAULT gen_random_uuid() <span class="sql-k">PRIMARY KEY</span>,<br>
-        &nbsp;&nbsp;type <span class="sql-v">text</span> NOT NULL,<br>
-        &nbsp;&nbsp;value <span class="sql-v">text</span> NOT NULL,<br>
-        &nbsp;&nbsp;pref <span class="sql-v">text</span>,<br>
-        &nbsp;&nbsp;created_at <span class="sql-v">timestamptz</span> DEFAULT now()<br>
-        );<br><br>
-        <span style="color:rgba(255,255,255,0.35)">-- RLSを有効にして全操作を許可</span><br>
-        <span class="sql-k">ALTER TABLE</span> masters <span class="sql-k">ENABLE ROW LEVEL SECURITY</span>;<br>
-        <span class="sql-k">DROP POLICY IF EXISTS</span> allow_all <span class="sql-k">ON</span> masters;<br>
-        <span class="sql-k">CREATE POLICY</span> allow_all <span class="sql-k">ON</span> masters <span class="sql-k">FOR ALL TO anon USING</span> (true) <span class="sql-k">WITH CHECK</span> (true);
-      </div>
-      <div style="margin-top:10px;display:flex;align-items:center;gap:10px">
-        <button class="btn btn-secondary btn-sm" onclick="copySql()">📋 SQLをコピー</button>
-        <span id="copy-status" style="font-size:12px;color:var(--green)"></span>
-      </div>
-      <textarea id="sql-plain" readonly style="position:absolute;left:-9999px;top:-9999px">CREATE TABLE IF NOT EXISTS masters (
-  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
-  type text NOT NULL,
-  value text NOT NULL,
-  pref text,
-  created_at timestamptz DEFAULT now()
-);
-
-ALTER TABLE masters ENABLE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS allow_all ON masters;
-CREATE POLICY allow_all ON masters FOR ALL TO anon USING (true) WITH CHECK (true);</textarea>
-    </div>
-
 
   </div><!-- /tab-settings -->
 
@@ -766,10 +716,11 @@ let fiscalYear = getCurrentFY();
 
 function getCurrentFY(){const n=new Date();return n.getMonth()>=3?n.getFullYear():n.getFullYear()-1;}
 // ── SUPABASE HELPERS ──
+// Supabase設定（直接埋め込み）
+const SB_URL = 'https://grhqmuqzpjwiuyexasmm.supabase.co';
+const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdyaHFtdXF6cGp3aXV5ZXhhc21tIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5ODQ4MzYsImV4cCI6MjA4OTU2MDgzNn0.USghV32TAEgx2fR62KHN3JI5YHTetsaTU5NgFWTScRo';
 function getSbConfig(){
-  const url=(localStorage.getItem('fd_sb_url')||'').trim();
-  const key=(localStorage.getItem('fd_sb_key')||'').trim();
-  return (url && key) ? {url, key} : null;
+  return {url: SB_URL, key: SB_KEY};
 }
 async function sbFetch(path, options={}){
   const cfg=getSbConfig();
@@ -1544,27 +1495,6 @@ function closeModal(id){
     if(activeCal){ const c=document.getElementById(activeCal); if(c)c.classList.remove('show'); activeCal=null; }
   }
 }
-
-function saveSupabaseConfig(){
-  localStorage.setItem('fd_sb_url',document.getElementById('sb-url').value.trim());
-  localStorage.setItem('fd_sb_key',document.getElementById('sb-key').value.trim());
-  toast('設定を保存しました。ページを再読み込みするとSupabaseからデータを取得します');
-}
-async function testSupabase(){
-  const url=document.getElementById('sb-url').value.trim();
-  const key=document.getElementById('sb-key').value.trim();
-  const st=document.getElementById('sb-status');
-  if(!url||!key){st.textContent='URLとキーを入力してください';st.style.color='var(--red)';return;}
-  st.textContent='接続中…';st.style.color='var(--text3)';
-  try{
-    const res=await fetch(`${url}/rest/v1/accommodations?select=count&limit=1`,{
-      headers:{'apikey':key,'Authorization':`Bearer ${key}`,'Prefer':'count=exact'}
-    });
-    if(res.ok){st.textContent='✓ 接続成功';st.style.color='var(--green)';toast('接続成功！「保存」を押して設定を確定してください');}
-    else{st.textContent=`✗ エラー: ${res.status}`;st.style.color='var(--red)';}
-  }catch(e){st.textContent='✗ 接続失敗: '+e.message;st.style.color='var(--red)';}
-}
-
 function fmtDate(d){if(!d)return'';const[y,m,day]=d.split('-');return`${y}/${m}/${day}`;}
 function fmtYen(n){return(n||0).toLocaleString();}
 function dateDiff(s,e){
@@ -1584,10 +1514,6 @@ async function init(){
   if(!localStorage.getItem('fd_persons'))  localStorage.setItem('fd_persons',  JSON.stringify(persons));
   if(!localStorage.getItem('fd_hotels_v2'))localStorage.setItem('fd_hotels_v2',JSON.stringify(hotels));
   if(!localStorage.getItem('fd_projects')) localStorage.setItem('fd_projects', JSON.stringify(projectsMaster));
-  const sbUrl=localStorage.getItem('fd_sb_url');
-  const sbKey=localStorage.getItem('fd_sb_key');
-  if(sbUrl)document.getElementById('sb-url').value=sbUrl;
-  if(sbKey)document.getElementById('sb-key').value=sbKey;
   if(getSbConfig()){
     toast('Supabaseからデータを読み込み中…');
     // マスタと宿泊記録を並行取得
