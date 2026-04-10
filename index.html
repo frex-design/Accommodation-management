@@ -649,6 +649,19 @@
     </div>
 
 
+    </div>
+
+    <!-- マスタ一括登録 -->
+    <div class="card" style="background:var(--surface2);border-style:dashed">
+      <div style="display:flex;align-items:center;justify-content:space-between">
+        <div>
+          <div style="font-size:13px;font-weight:700;color:var(--navy);margin-bottom:4px">🔄 マスタデータをSupabaseに一括登録</div>
+          <div style="font-size:12px;color:var(--text3);line-height:1.7">宿泊者・業務名・宿泊先がSupabaseに登録されていない場合はこちらをクリックしてください。</div>
+        </div>
+        <button class="btn btn-secondary" style="white-space:nowrap;margin-left:20px" onclick="manualBulkRegister()">一括登録する</button>
+      </div>
+    </div>
+
   </div><!-- /tab-settings -->
 
 </div><!-- /main -->
@@ -987,25 +1000,65 @@ async function loadMastersFromSupabase(){
     });
     if(!res.ok){
       const txt=await res.text();
-      // mastersテーブル未作成でも警告のみ（accommodationsは使える）
       if(txt.includes('42P01')||txt.includes('does not exist')){
-        console.warn('mastersテーブルが未作成です。設定タブのSQLを実行してください');
+        console.warn('mastersテーブルが未作成です');
       }
       return false;
     }
     const data=await res.json();
     if(!Array.isArray(data)) return false;
+
+    // Supabaseが空の場合はデフォルトデータをそのまま使う（上書きしない）
     const newPersons=data.filter(r=>r.type==='person').map(r=>r.value);
     if(newPersons.length>0){ persons=newPersons; localStorage.setItem('fd_persons',JSON.stringify(persons)); }
+
     const newProjects=data.filter(r=>r.type==='project').map(r=>r.value);
     if(newProjects.length>0){ projectsMaster=newProjects; localStorage.setItem('fd_projects',JSON.stringify(projectsMaster)); }
+
     const newHotels=data.filter(r=>r.type==='hotel').map(r=>({pref:r.pref||'その他',name:r.value}));
     if(newHotels.length>0){ hotels=newHotels; localStorage.setItem('fd_hotels_v2',JSON.stringify(hotels)); }
+
+    // mastersが完全に空ならデフォルトデータをSupabaseに自動登録
+    if(data.length===0){
+      console.log('mastersが空のためデフォルトデータを登録します');
+      await bulkRegisterDefaultMasters();
+    }
     return true;
   }catch(e){
     console.warn('マスタ読み込み失敗:',e.message);
     return false;
   }
+}
+
+// デフォルトマスタを一括登録
+async function bulkRegisterDefaultMasters(){
+  const cfg=getSbConfig();
+  if(!cfg) return;
+  const rows=[];
+  persons.forEach(v=>rows.push({type:'person',value:v,pref:null}));
+  projectsMaster.forEach(v=>rows.push({type:'project',value:v,pref:null}));
+  hotels.forEach(h=>rows.push({type:'hotel',value:h.name,pref:h.pref}));
+  if(!rows.length) return;
+  try{
+    await fetch(`${cfg.url}/rest/v1/masters`,{
+      method:'POST',
+      headers:{
+        'apikey':cfg.key,
+        'Authorization':`Bearer ${cfg.key}`,
+        'Content-Type':'application/json',
+        'Prefer':'return=minimal'
+      },
+      body:JSON.stringify(rows)
+    });
+    toast('✓ マスタデータをSupabaseに登録しました');
+  }catch(e){
+    console.warn('一括登録失敗:',e.message);
+  }
+}
+async function manualBulkRegister(){
+  toast('Supabaseにマスタデータを登録中…');
+  await bulkRegisterDefaultMasters();
+  renderMasterChips();
 }
 async function addMasterToSupabase(type, value, pref=null){
   const cfg=getSbConfig();
