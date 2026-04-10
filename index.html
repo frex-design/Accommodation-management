@@ -1712,18 +1712,23 @@ function toast(msg,type=''){
 }
 
 async function init(){
-  if(!localStorage.getItem('fd_persons'))  localStorage.setItem('fd_persons',  JSON.stringify(persons));
-  if(!localStorage.getItem('fd_hotels_v2'))localStorage.setItem('fd_hotels_v2',JSON.stringify(hotels));
-  if(!localStorage.getItem('fd_projects')) localStorage.setItem('fd_projects', JSON.stringify(projectsMaster));
+  // 常にデフォルトデータでマスタをリセット（Supabaseが上書きする）
+  persons       = JSON.parse(localStorage.getItem('fd_persons')   || JSON.stringify(['加瀬谷 建','星野 健太','佐藤 優太','二木 瞭太郎','渡部 智也','藤岡 悠','本間 祐大','堀井 博之']));
+  hotels        = DEFAULT_HOTELS.slice(); // デフォルトホテルを必ず読み込む
+  projectsMaster= JSON.parse(localStorage.getItem('fd_projects')  || '[]');
+  // localStorageに保存
+  localStorage.setItem('fd_persons',  JSON.stringify(persons));
+  localStorage.setItem('fd_hotels_v2',JSON.stringify(hotels));
+  localStorage.setItem('fd_projects', JSON.stringify(projectsMaster));
+
   if(getSbConfig()){
     toast('Supabaseからデータを読み込み中…');
-    // マスタと宿泊記録を並行取得
     const [masterOk, recordOk] = await Promise.all([
       loadMastersFromSupabase(),
       loadFromSupabase()
     ]);
     if(masterOk && recordOk) toast('✓ Supabaseからデータを読み込みました');
-    else if(!masterOk && !recordOk) toast('⚠ Supabase読み込み失敗。localStorageのデータを表示します','error');
+    else if(!masterOk && !recordOk) toast('⚠ Supabase読み込み失敗。デフォルトデータを表示します','error');
     else toast('✓ Supabaseからデータを読み込みました（一部ローカル）');
   }
   renderList();
